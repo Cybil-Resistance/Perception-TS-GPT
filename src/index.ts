@@ -1,12 +1,7 @@
-import { Configuration, OpenAIApi } from "openai";
-import cfg from "./config/config";
+import { OpenAI } from "@src/classes/llm";
 
-(async () => {
-	const configuration = new Configuration({
-		apiKey: cfg.OPENAI_API_KEY,
-	  });
-	  const openai = new OpenAIApi(configuration);
-	  const response = await openai.listModels();
-
-	  console.log(response.data);
+(async (): Promise<void> => {
+	const openAI = new OpenAI();
+	const response = await openAI.getCompletion("Hello world");
+	console.log(response);
 })();
