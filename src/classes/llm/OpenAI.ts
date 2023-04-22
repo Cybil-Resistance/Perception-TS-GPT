@@ -1,4 +1,10 @@
-import { Configuration, OpenAIApi, ChatCompletionResponseMessage } from "openai";
+import {
+	Configuration,
+	OpenAIApi,
+	ChatCompletionRequestMessage,
+	ChatCompletionResponseMessage,
+	ChatCompletionRequestMessageRoleEnum,
+} from "openai";
 import cfg from "@src/config";
 
 export class OpenAI {
@@ -12,8 +18,20 @@ export class OpenAI {
 		this.openai = new OpenAIApi(configuration);
 	}
 
-	public async getCompletion(
+	public async getSimplePromptCompletion(
 		prompt: string,
+		role: ChatCompletionRequestMessageRoleEnum = "user",
+	): Promise<ChatCompletionResponseMessage> {
+		return await this.getCompletion([
+			{
+				role: role,
+				content: prompt,
+			},
+		]);
+	}
+
+	public async getCompletion(
+		messages: ChatCompletionRequestMessage[],
 		model: string = cfg.FAST_LLM_MODEL,
 		temperature: number = 0,
 		n: number = 1,
@@ -21,12 +39,7 @@ export class OpenAI {
 	): Promise<ChatCompletionResponseMessage> {
 		const completion = await this.openai.createChatCompletion({
 			model: model,
-			messages: [
-				{
-					role: "user",
-					content: prompt,
-				},
-			],
+			messages: messages,
 			temperature: temperature,
 			n: n,
 			max_tokens: max_tokens,
