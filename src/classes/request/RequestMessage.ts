@@ -1,4 +1,5 @@
 import { ChatCompletionRequestMessage, ChatCompletionResponseMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
+import { CONSTRAINTS, COMMANDS, RESOURCES, PERFORMANCE_EVALUATION, RESPONSE_FORMAT } from "@src/config";
 
 type RequestMessageHistory = {
 	userPrompt: ChatCompletionRequestMessage;
@@ -12,6 +13,13 @@ export class RequestMessage {
 		// Compile everything into a single prompt
 		let messages = [];
 
+		// Add the prompt qualifiers
+		messages.push({
+			role: ChatCompletionRequestMessageRoleEnum.System,
+			content: `${CONSTRAINTS}${COMMANDS}${RESOURCES}${PERFORMANCE_EVALUATION}${RESPONSE_FORMAT}`
+		});
+
+		// Add the conversation history
 		const conversationHistory = this.generateConversationHistory();
 		if (conversationHistory.length > 0) {
 			let prompt = `Consider the following history for the conversation:\n\n`;
@@ -24,6 +32,12 @@ export class RequestMessage {
 				content: prompt,
 			});
 		}
+
+		// Enforce the response format
+		messages.push({
+			role: ChatCompletionRequestMessageRoleEnum.User,
+			content: "Determine which next command to use, and respond using the JSON format specified.",
+		});
 
 		// Add the user's prompt
 		messages.push({

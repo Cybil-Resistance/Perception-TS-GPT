@@ -5,7 +5,7 @@ import {
 	ChatCompletionResponseMessage,
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
-import cfg from "@src/config";
+import { config as cfg } from "@src/config";
 
 export class OpenAI {
 	private openai: OpenAIApi;
