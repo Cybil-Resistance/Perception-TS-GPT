@@ -1,6 +1,7 @@
 {
 	"singleQuote": false,
 	"trailingComma": "all",
+	"printWidth": 140,
 	"overrides": [
 		{
 			"files": ["*.ts", "*.mts"],
