@@ -6,6 +6,7 @@ import { RequestMessage } from "@src/classes/request";
 	const openAI = new OpenAI();
 	const requestMessage = new RequestMessage();
 
+	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		// Get the user's prompt
 		const prompt = await PromptCLI.text(`Prompt (use "n" to exit):`);

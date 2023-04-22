@@ -40,7 +40,7 @@ export class OpenAI {
 			model: model,
 			messages: messages,
 			temperature: temperature,
-			n: n
+			n: n,
 		});
 
 		return completion.data.choices[0].message;

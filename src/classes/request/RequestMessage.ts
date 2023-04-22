@@ -11,12 +11,12 @@ export class RequestMessage {
 
 	public generateMessagesWithHistory(): ChatCompletionRequestMessage[] {
 		// Compile everything into a single prompt
-		let messages = [];
+		const messages = [];
 
 		// Add the prompt qualifiers
 		messages.push({
 			role: ChatCompletionRequestMessageRoleEnum.System,
-			content: `${CONSTRAINTS}${COMMANDS}${RESOURCES}${PERFORMANCE_EVALUATION}${RESPONSE_FORMAT}`
+			content: `${CONSTRAINTS}${COMMANDS}${RESOURCES}${PERFORMANCE_EVALUATION}${RESPONSE_FORMAT}`,
 		});
 
 		// Add the conversation history
@@ -48,7 +48,7 @@ export class RequestMessage {
 		return messages;
 	}
 
-	public generateConversationHistory(): any {
+	public generateConversationHistory(): { prompt: string; response: string }[] {
 		const conversationHistory = [];
 
 		for (const item of this.history) {
