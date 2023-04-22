@@ -20,7 +20,7 @@ export class OpenAI {
 
 	public async getSimplePromptCompletion(
 		prompt: string,
-		role: ChatCompletionRequestMessageRoleEnum = "user",
+		role: ChatCompletionRequestMessageRoleEnum = ChatCompletionRequestMessageRoleEnum.User,
 	): Promise<ChatCompletionResponseMessage> {
 		return await this.getCompletion([
 			{
@@ -35,14 +35,12 @@ export class OpenAI {
 		model: string = cfg.FAST_LLM_MODEL,
 		temperature: number = 0,
 		n: number = 1,
-		max_tokens: number = cfg.FAST_TOKEN_LIMIT,
 	): Promise<ChatCompletionResponseMessage> {
 		const completion = await this.openai.createChatCompletion({
 			model: model,
 			messages: messages,
 			temperature: temperature,
-			n: n,
-			max_tokens: max_tokens,
+			n: n
 		});
 
 		return completion.data.choices[0].message;
