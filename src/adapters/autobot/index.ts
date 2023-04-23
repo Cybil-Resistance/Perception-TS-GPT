@@ -1,0 +1,1 @@
+export { AutoBotAdapter } from "./AutoBotAdapter";

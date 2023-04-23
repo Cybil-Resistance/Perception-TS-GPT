@@ -12,4 +12,15 @@ export class PromptCLI {
 
 		return prompt;
 	}
+
+	public static async select(message: string, choices: prompts.Choice[]): Promise<any> {
+		const { prompt } = await prompts({
+			type: "select",
+			name: "prompt",
+			message,
+			choices,
+		});
+
+		return prompt;
+	}
 }
