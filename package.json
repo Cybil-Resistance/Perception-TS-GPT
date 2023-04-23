@@ -9,7 +9,7 @@
 	},
 	"scripts": {
 		"start": "node build/src/index.js",
-		"start:dev": "nodemon --no-stdin -r tsconfig-paths/register src/index.ts",
+		"start:dev": "ts-node -r tsconfig-paths/register src/index.ts",
 		"lint": "eslint . --ext .ts --ext .mts",
 		"prettier": "prettier --config .prettierrc --write .",
 		"test": "ts-mocha -r tsconfig-paths/register -p tsconfig.json --bail --recursive test/*",
