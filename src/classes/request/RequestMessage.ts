@@ -6,7 +6,6 @@ type RequestMessageHistory = {
 }[];
 
 export class RequestMessage {
-
 	private systemPrompt: ChatCompletionRequestMessage;
 	private history: RequestMessageHistory = [];
 

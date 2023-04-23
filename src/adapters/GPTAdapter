@@ -1,9 +1,0 @@
-export default interface GPTAdapter {
-	// Properties
-    name: string;
-    description: string
-
-	// Methods
-	constructor(): void;
-    run(): void;
-}

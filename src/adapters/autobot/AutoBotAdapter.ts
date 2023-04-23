@@ -1,4 +1,3 @@
-//import GPTAdapter from "@src/adapters/GPTAdapter";
 import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
@@ -7,7 +6,6 @@ import { RequestMessage } from "@src/classes/request";
 import { CONSTRAINTS, COMMANDS, RESOURCES, PERFORMANCE_EVALUATION, RESPONSE_FORMAT } from "./config/prompts";
 
 export default class AutoBotAdapter {
-	//implements GPTAdapter {
 	public static getName(): string {
 		return "AutoBot";
 	}
