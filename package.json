@@ -9,13 +9,13 @@
 	},
 	"scripts": {
 		"start": "node build/src/index.js",
-		"start:dev": "nodemon -r tsconfig-paths/register src/index.ts",
+		"start:dev": "nodemon --no-stdin -r tsconfig-paths/register src/index.ts",
 		"lint": "eslint . --ext .ts --ext .mts",
 		"prettier": "prettier --config .prettierrc --write .",
 		"test": "ts-mocha -p tsconfig.json --bail --recursive test",
 		"clean": "rm -rf coverage build tmp",
 		"prebuild": "npm run lint",
-		"build": "npm run clean && tsc -p tsconfig.release.json"
+		"build": "npm run clean && tsc -p tsconfig.release.json && tsc-alias -p tsconfig.release.json"
 	},
 	"devDependencies": {
 		"@types/mocha": "^10.0.1",
@@ -29,6 +29,7 @@
 		"nodemon": "^2.0.22",
 		"prettier": "~2.8",
 		"ts-mocha": "^10.0.0",
+		"tsc-alias": "^1.8.5",
 		"tsconfig-paths": "^4.2.0",
 		"typescript": "~5.0"
 	},

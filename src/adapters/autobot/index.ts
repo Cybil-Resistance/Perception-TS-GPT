@@ -1,1 +1,1 @@
-export { AutoBotAdapter } from "./AutoBotAdapter";
+export * from "./AutoBotAdapter";
