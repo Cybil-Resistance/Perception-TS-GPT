@@ -1,5 +1,4 @@
 import { ChatCompletionRequestMessage, ChatCompletionResponseMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
-import { CONSTRAINTS, COMMANDS, RESOURCES, PERFORMANCE_EVALUATION, RESPONSE_FORMAT } from "@src/config";
 
 type RequestMessageHistory = {
 	userPrompt: ChatCompletionRequestMessage;
@@ -7,17 +6,36 @@ type RequestMessageHistory = {
 }[];
 
 export class RequestMessage {
+
+	private systemPrompt: ChatCompletionRequestMessage;
 	private history: RequestMessageHistory = [];
+
+	public setSystemPrompt(prompt: string): void {
+		this.systemPrompt = {
+			role: ChatCompletionRequestMessageRoleEnum.System,
+			content: prompt,
+		};
+	}
+
+	public addUserPrompt(prompt: string): void {
+		this.history.push({
+			userPrompt: {
+				role: ChatCompletionRequestMessageRoleEnum.User,
+				content: prompt,
+			},
+		});
+	}
+
+	public addGPTResponse(response: ChatCompletionResponseMessage): void {
+		this.history[this.history.length - 1].gptResponse = response;
+	}
 
 	public generateMessagesWithHistory(): ChatCompletionRequestMessage[] {
 		// Compile everything into a single prompt
 		const messages = [];
 
 		// Add the prompt qualifiers
-		messages.push({
-			role: ChatCompletionRequestMessageRoleEnum.System,
-			content: `${CONSTRAINTS}${COMMANDS}${RESOURCES}${PERFORMANCE_EVALUATION}${RESPONSE_FORMAT}`,
-		});
+		messages.push(this.systemPrompt);
 
 		// Add the conversation history
 		const conversationHistory = this.generateConversationHistory();
@@ -63,18 +81,5 @@ export class RequestMessage {
 		}
 
 		return conversationHistory;
-	}
-
-	public addUserPrompt(prompt: string): void {
-		this.history.push({
-			userPrompt: {
-				role: ChatCompletionRequestMessageRoleEnum.User,
-				content: prompt,
-			},
-		});
-	}
-
-	public addGPTResponse(response: ChatCompletionResponseMessage): void {
-		this.history[this.history.length - 1].gptResponse = response;
 	}
 }
