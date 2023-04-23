@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { config as cfg } from "@src/config"; // Assuming you have a config file with the relevant types and data
+import { config as cfg } from "@src/config";
 
 export type GoogleSearchResult = string | string[];
 
@@ -33,7 +33,7 @@ export default class Google {
 			const searchResults = result.data.items || [];
 
 			// Create a list of only the URLs from the search results
-			const searchResultsLinks = searchResults.map(item => item.link);
+			const searchResultsLinks = searchResults.map((item) => item.link);
 
 			// Return the list of search result URLs
 			return searchResultsLinks;

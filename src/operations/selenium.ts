@@ -26,21 +26,13 @@ export default class Selenium {
 			options.addArguments("--headless");
 			options.addArguments("--disable-gpu");
 
-			const driver: WebDriver = await new Builder()
-				.forBrowser("chrome")
-				.setChromeOptions(options)
-				.build();
+			const driver: WebDriver = await new Builder().forBrowser("chrome").setChromeOptions(options).build();
 
 			await driver.get(url);
 
-			const body: WebElement = await driver.wait(
-				until.elementLocated(By.tagName("body")),
-				10000
-			);
+			await driver.wait(until.elementLocated(By.tagName("body")), 10000);
 
-			const pageSource: string = await driver.executeScript<string>(
-				"return document.body.outerHTML;"
-			);
+			const pageSource: string = await driver.executeScript<string>("return document.body.outerHTML;");
 
 			const dom = new JSDOM(pageSource);
 			const { document } = dom.window;
