@@ -28,6 +28,7 @@ export default class PerceptionBotAdapter {
 				{ title: "Create a new operation", value: "create" },
 				{ title: "Edit an existing operation", value: "edit" },
 				{ title: "Create a mocha test for an existing operation", value: "test" },
+				{ title: "Go back", value: "back" },
 			]);
 
 			switch (prompt) {
@@ -41,7 +42,7 @@ export default class PerceptionBotAdapter {
 					//await this.createTestOperation();
 					break;
 				default:
-					break;
+					return;
 			}
 		}
 	}
@@ -70,42 +71,6 @@ export default class PerceptionBotAdapter {
 		}
 	}
 
-	private static async operationLoop(content: string): Promise<string> {
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			// Check if the user wants to save the operation
-			const nextOperation: string = await PromptCLI.select("Would you like to do next?", [
-				{ title: "Save File", value: "save" },
-				{ title: "Edit File", value: "edit" },
-				{ title: "Try Again", value: "retry" },
-				{ title: "Cancel", value: "cancel" },
-			]);
-
-			if (nextOperation === "save") {
-				await this.promptFileSave(content);
-				return "saved";
-			} else if (nextOperation === "edit") {
-				const response: ChatCompletionResponseMessage = await this.promptFileEdit(content);
-				content = response.content;
-
-				// Report the response to the user
-				this.clearConsole();
-				this.printCode(content);
-			} else if (nextOperation === "cancel") {
-				return "cancel";
-			}
-		}
-	}
-
-	public static async getOperationsFilenames(): Promise<string[]> {
-		// Get all of the files in the operations directory
-		const dir = path.resolve(process.cwd() + "/src/operations");
-		const files = fs.readdirSync(dir);
-
-		// Return all operations, except for index.ts
-		return files.filter((file) => file !== "index.ts");
-	}
-
 	private static async editOperation(): Promise<void> {
 		// Get all of the current operations
 		const operations: string[] = await this.getOperationsFilenames();
@@ -126,11 +91,54 @@ export default class PerceptionBotAdapter {
 		this.printCode(file);
 
 		const response = await this.promptFileEdit(file);
+		if (!response) {
+			return;
+		}
 
 		// Display the latest response & enter the operation loop
 		this.clearConsole();
 		this.printCode(response.content);
-		await this.operationLoop(response.content);
+		await this.operationLoop(response.content, operation);
+	}
+
+	private static async operationLoop(content: string, filename?: string): Promise<string> {
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			// Check if the user wants to save the operation
+			const nextOperation: string = await PromptCLI.select("Would you like to do next?", [
+				{ title: "Save File", value: "save" },
+				{ title: "Edit File", value: "edit" },
+				{ title: "Try Again", value: "retry" },
+				{ title: "Cancel", value: "cancel" },
+			]);
+
+			if (nextOperation === "save") {
+				await this.promptFileSave(content, filename);
+				return "saved";
+			} else if (nextOperation === "edit") {
+				const response: ChatCompletionResponseMessage | void = await this.promptFileEdit(content);
+				if (!response) {
+					continue;
+				}
+
+				content = response.content;
+
+				// Report the response to the user
+				this.clearConsole();
+				this.printCode(content);
+			} else if (nextOperation === "cancel") {
+				return "cancel";
+			}
+		}
+	}
+
+	public static async getOperationsFilenames(): Promise<string[]> {
+		// Get all of the files in the operations directory
+		const dir = path.resolve(process.cwd() + "/src/operations");
+		const files = fs.readdirSync(dir);
+
+		// Return all operations, except for index.ts
+		return files.filter((file) => file !== "index.ts");
 	}
 
 	private static printCode(code: string): void {
@@ -141,17 +149,27 @@ export default class PerceptionBotAdapter {
 		console.clear();
 	}
 
-	private static async promptFileEdit(content: string): Promise<ChatCompletionResponseMessage> {
+	private static async promptFileEdit(content: string): Promise<ChatCompletionResponseMessage | void> {
 		// Prompt the user for the edits they want to make
-		const edits: string = await PromptCLI.text("What edits would you like to make?");
+		const edits: string = await PromptCLI.text("What edits would you like to make? (Enter nothing to return to previous menu)");
+
+		// If nothing is provided, exit
+		if (edits === "") {
+			return;
+		}
 
 		// Construct the request message
 		return await this.callOpenAi(EDIT_OPERATION.replaceAll("{{EDITS}}", edits).replaceAll("{{CODE}}", content));
 	}
 
-	private static async promptFileSave(content: string): Promise<void> {
-		// Prompt the user for the filename
-		let filename: string = await PromptCLI.text("What would you like to name the file? (include the extension)");
+	private static async promptFileSave(content: string, filename?: string): Promise<void> {
+		// If we don't have a filename, prompt the user for one
+		if (!filename) {
+			// Prompt the user for the filename
+			filename = await PromptCLI.text("What would you like to name the file? (include the extension)");
+		} else {
+			console.log(`Saving file: ${filename}`);
+		}
 
 		// For this filename, strip any slashes
 		filename = filename.replaceAll("/", "");
@@ -159,6 +177,9 @@ export default class PerceptionBotAdapter {
 		// Save the operation
 		FileWrite.setWorkingDirectory(path.resolve(process.cwd() + "/src/operations"));
 		FileWrite.run(path.resolve(process.cwd() + "/src/operations/" + filename), content);
+
+		// Log the filename
+		console.log(`Saved file: ${filename}`);
 	}
 
 	private static async callOpenAi(userPrompt: string): Promise<ChatCompletionResponseMessage> {
