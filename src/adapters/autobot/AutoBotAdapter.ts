@@ -32,7 +32,9 @@ export default class AutoBotAdapter {
 			requestMessage.addHistoryContext();
 
 			// Construct the request message based on history
-			requestMessage.addUserPrompt("Determine which next command to use, and respond ONLY using the JSON format specified. No other response format is permitted.");
+			requestMessage.addUserPrompt(
+				"Determine which next command to use, and respond ONLY using the JSON format specified. No other response format is permitted.",
+			);
 
 			// Submit the request to OpenAI, and cycle back to handle the response
 			const messages = requestMessage.generateMessages();
