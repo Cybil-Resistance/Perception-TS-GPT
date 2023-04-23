@@ -1,81 +1,64 @@
 import { ChatCompletionRequestMessage, ChatCompletionResponseMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
 
-type RequestMessageHistory = {
-	userPrompt: ChatCompletionRequestMessage;
+type RequestMessageHistoryBlock = {
+	prompts: ChatCompletionRequestMessage[];
 	gptResponse?: ChatCompletionResponseMessage;
-}[];
+};
+
+type RequestMessageHistory = RequestMessageHistoryBlock[];
 
 export class RequestMessage {
-	private systemPrompt: ChatCompletionRequestMessage;
-	private useSystemTime: boolean;
+	private currentPrompts: RequestMessageHistoryBlock = {prompts: []};
 	private history: RequestMessageHistory = [];
 
-	public setSystemPrompt(prompt: string): void {
-		this.systemPrompt = {
+	public addSystemPrompt(prompt: string): void {
+		this.currentPrompts.prompts.push({
 			role: ChatCompletionRequestMessageRoleEnum.System,
 			content: prompt,
-		};
-	}
-
-	public includeSystemTime(include: boolean): void {
-		this.useSystemTime = include;
-	}
-
-	public addUserPrompt(prompt: string): void {
-		this.history.push({
-			userPrompt: {
-				role: ChatCompletionRequestMessageRoleEnum.User,
-				content: prompt,
-			},
 		});
 	}
 
-	public addGPTResponse(response: ChatCompletionResponseMessage): void {
-		this.history[this.history.length - 1].gptResponse = response;
+	public addUserPrompt(prompt: string): void {
+		this.currentPrompts.prompts.push({
+			role: ChatCompletionRequestMessageRoleEnum.User,
+			content: prompt,
+		});
 	}
 
-	public generateMessagesWithHistory(): ChatCompletionRequestMessage[] {
-		// Compile everything into a single prompt
-		const messages = [];
-
-		// Add the prompt qualifiers
-		messages.push(this.systemPrompt);
-
-		// Add system time if requested
-		if (this.useSystemTime) {
-			messages.push({
-				role: ChatCompletionRequestMessageRoleEnum.System,
-				content: `The current time is ${new Date().toLocaleString()}.`,
-			});
-		}
-
+	public addHistoryContext(): void {
 		// Add the conversation history
 		const conversationHistory = this.generateConversationHistory();
 		if (conversationHistory.length > 0) {
 			let prompt = `This reminds you of these events from your past:\n\n`;
 			for (const item of conversationHistory) {
-				prompt += item.response.content;
-				//prompt += `Prompt: ${item.prompt.content}\nResponse: ${item.response.content}\n\n`;
+				//prompt += item.response.content + "\n\n";
+				prompt += `My prompt: ${item.prompt.content}\nYour response: ${item.response.content}\n\n`;
 			}
 
-			messages.push({
+			this.currentPrompts.prompts.push({
 				role: ChatCompletionRequestMessageRoleEnum.System,
 				content: prompt,
 			});
 		}
+	}
 
-		// Enforce the response format
-		messages.push({
-			role: ChatCompletionRequestMessageRoleEnum.User,
-			content: "Determine which next command to use, and respond using the JSON format specified.",
-		});
+	public addGPTResponse(response: ChatCompletionResponseMessage): void {
+		this.currentPrompts.gptResponse = response;
+		this.history.push(this.currentPrompts);
+		this.currentPrompts = { prompts: [] };
+	}
 
-		// Add the user's prompt
-		messages.push({
-			role: ChatCompletionRequestMessageRoleEnum.User,
-			content: this.history[this.history.length - 1].userPrompt.content,
-		});
+	public generateMessages(): ChatCompletionRequestMessage[] {
+		// Compile everything into a single prompt
+		const messages = [];
+		for (const item of this.currentPrompts.prompts) {
+			messages.push(item);
+		}
 
+		// If using debug mode, print out the messages
+		//console.debug(messages);
+
+		// Return the compiled prompt
 		return messages;
 	}
 
@@ -87,10 +70,16 @@ export class RequestMessage {
 				continue;
 			}
 
-			conversationHistory.push({
-				prompt: item.userPrompt,
-				response: item.gptResponse,
-			});
+			for (const prompt of item.prompts) {
+				if (prompt.role === ChatCompletionRequestMessageRoleEnum.User) {
+					conversationHistory.push({
+						prompt: prompt,
+						response: item.gptResponse,
+					});
+
+					continue;
+				}
+			}
 		}
 
 		return conversationHistory;

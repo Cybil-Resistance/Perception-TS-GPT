@@ -13,6 +13,7 @@ export class PromptCLI {
 		return prompt;
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public static async select(message: string, choices: prompts.Choice[]): Promise<any> {
 		const { prompt } = await prompts({
 			type: "select",
