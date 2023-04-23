@@ -1,12 +1,19 @@
 import { config as cfg } from "@src/config";
 import { ChatCompletionRequestMessage, ChatCompletionResponseMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
 
+type PromptRecord = ChatCompletionRequestMessage | string;
+
 type RequestMessageHistoryBlock = {
-	prompts: (ChatCompletionRequestMessage | string)[];
+	prompts: PromptRecord[];
 	gptResponse?: ChatCompletionResponseMessage;
 };
 
 type RequestMessageHistory = RequestMessageHistoryBlock[];
+
+type HistoryItem = {
+	prompt: ChatCompletionRequestMessage;
+	response: ChatCompletionResponseMessage;
+};
 
 export class RequestMessage {
 	private currentPrompts: RequestMessageHistoryBlock = { prompts: [] };
@@ -31,49 +38,55 @@ export class RequestMessage {
 	}
 
 	public generateHistoryContext(): ChatCompletionRequestMessage | void {
-		function formatHistoryItem(item: { prompt: ChatCompletionRequestMessage; response: ChatCompletionResponseMessage }): string {
-			return `My prompt: ${item.prompt.content}\nYour response: ${item.response.content}\n\n`;
+		// Trim history until it fits within the token limit
+		while (this.doesPromptExceedTokens() && this.generateConversationHistory().length > 0) {
+			this.history.shift();
 		}
 
-		// Prepare the history context
-		const historyContext = `This reminds you of these events from your past:\n\n`;
+		// Debug
+		//console.log(this.estimateCurrentTokenUse(), cfg.FAST_TOKEN_LIMIT, this.generateConversationHistory().length);
 
-		// Get the conversation history
-		let conversationHistory = this.generateConversationHistory();
-
-		// Estimate the length of the conversation history
-		let promptEstimatedLength = 0;
-		do {
-			// If the conversation history is too long, remove the oldest item
-			if (promptEstimatedLength > cfg.FAST_TOKEN_LIMIT && conversationHistory.length > 0) {
-				this.history.shift();
-				conversationHistory = this.generateConversationHistory();
-			}
-
-			promptEstimatedLength = this.estimateTokens(
-				this.currentPrompts.prompts.reduce(
-					(acc, item: ChatCompletionRequestMessage | string) => (typeof item === "string" ? acc : acc + item.content),
-					"",
-				) +
-					historyContext +
-					conversationHistory.reduce((acc, item) => acc + formatHistoryItem(item), ""),
-			);
-
-			// Debugging
-			//console.log(promptEstimatedLength, cfg.FAST_TOKEN_LIMIT, conversationHistory.length)
-		} while (promptEstimatedLength > cfg.FAST_TOKEN_LIMIT && conversationHistory.length > 0);
-
-		if (conversationHistory.length > 0) {
-			let prompt = historyContext;
-			for (const item of conversationHistory) {
-				prompt += formatHistoryItem(item);
-			}
-
+		// Return the history context if there is any history
+		if (this.generateConversationHistory().length > 0) {
 			return {
 				role: ChatCompletionRequestMessageRoleEnum.System,
-				content: prompt,
+				content: this.buildHistoryContent(),
 			};
 		}
+	}
+
+	private estimateCurrentTokenUse(): number {
+		const promptsStr = this.currentPrompts.prompts.reduce(
+			(acc, item: PromptRecord) => (typeof item === "string" ? acc : acc + item.content),
+			"",
+		);
+		const historyContent = this.buildHistoryContent();
+
+		return this.estimateTokens(promptsStr + historyContent);
+	}
+
+	private doesPromptExceedTokens(): boolean {
+		return this.estimateCurrentTokenUse() > cfg.FAST_TOKEN_LIMIT;
+	}
+
+	public estimateTokens(text: string): number {
+		const wordCount = text.split(" ").length;
+		const charCount = text.length;
+		const tokensCountWordEst = wordCount / 0.75;
+		const tokensCountCharEst = charCount / 4;
+
+		return Math.floor(Math.max(tokensCountWordEst, tokensCountCharEst));
+	}
+
+	private formatHistoryItem(item: HistoryItem): string {
+		return `My prompt: ${item.prompt.content}\nYour response: ${item.response.content}\n\n`;
+	}
+
+	private buildHistoryContent(): string {
+		const historyContext = `This reminds you of these events from your past:\n\n`;
+		const historyStr = this.generateConversationHistory().reduce((acc, item) => acc + this.formatHistoryItem(item), "");
+
+		return historyContext + historyStr;
 	}
 
 	public addGPTResponse(response: ChatCompletionResponseMessage): void {
@@ -90,7 +103,7 @@ export class RequestMessage {
 				if (item === "HISTORY_CONTEXT_HERE") {
 					const historyContext = this.generateHistoryContext();
 					if (historyContext) {
-						messages.push();
+						messages.push(historyContext);
 					}
 				}
 			} else {
@@ -130,14 +143,5 @@ export class RequestMessage {
 		}
 
 		return conversationHistory;
-	}
-
-	public estimateTokens(text: string): number {
-		const wordCount = text.split(" ").length;
-		const charCount = text.length;
-		const tokensCountWordEst = wordCount / 0.75;
-		const tokensCountCharEst = charCount / 4;
-
-		return Math.floor(Math.max(tokensCountWordEst, tokensCountCharEst));
 	}
 }
