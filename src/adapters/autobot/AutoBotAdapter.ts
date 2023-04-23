@@ -3,7 +3,7 @@ import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
 
 // Local imports
-import { CONSTRAINTS, COMMANDS, RESOURCES, PERFORMANCE_EVALUATION, RESPONSE_FORMAT } from "./config/prompts";
+import { SYSTEM_PROMPT } from "./config/prompts";
 
 export default class AutoBotAdapter {
 	public static getName(): string {
@@ -18,17 +18,19 @@ export default class AutoBotAdapter {
 		const openAI = new OpenAI();
 		const requestMessage = new RequestMessage();
 
+		// Get the user's prompt
+		const prompt = await PromptCLI.text(`What objective would you like your AutoBot to perform for you?:`);
+		if (PromptCLI.quitCommands.includes(prompt)) {
+			process.exit();
+		}
+
 		// Set up the system prompt
-		requestMessage.setSystemPrompt(`${CONSTRAINTS}${COMMANDS}${RESOURCES}${PERFORMANCE_EVALUATION}${RESPONSE_FORMAT}`);
+		requestMessage.setSystemPrompt(SYSTEM_PROMPT.replace("{{OBJECTIVE}}", prompt));
+		requestMessage.includeSystemTime(true);
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			// Get the user's prompt
-			const prompt = await PromptCLI.text(`Prompt (use "n" to exit):`);
-
-			if (PromptCLI.quitCommands.includes(prompt)) {
-				process.exit();
-			}
+			let prompt = "Determine which next command to use, and respond using the format specified above:";
 
 			// Construct the request message based on history
 			requestMessage.addUserPrompt(prompt);

@@ -7,6 +7,7 @@ type RequestMessageHistory = {
 
 export class RequestMessage {
 	private systemPrompt: ChatCompletionRequestMessage;
+	private useSystemTime: boolean;
 	private history: RequestMessageHistory = [];
 
 	public setSystemPrompt(prompt: string): void {
@@ -14,6 +15,10 @@ export class RequestMessage {
 			role: ChatCompletionRequestMessageRoleEnum.System,
 			content: prompt,
 		};
+	}
+
+	public includeSystemTime(include: boolean): void {
+		this.useSystemTime = include;
 	}
 
 	public addUserPrompt(prompt: string): void {
@@ -36,12 +41,21 @@ export class RequestMessage {
 		// Add the prompt qualifiers
 		messages.push(this.systemPrompt);
 
+		// Add system time if requested
+		if (this.useSystemTime) {
+			messages.push({
+				role: ChatCompletionRequestMessageRoleEnum.System,
+				content: `The current time is ${new Date().toLocaleString()}.`,
+			});
+		}
+
 		// Add the conversation history
 		const conversationHistory = this.generateConversationHistory();
 		if (conversationHistory.length > 0) {
-			let prompt = `Consider the following history for the conversation:\n\n`;
+			let prompt = `This reminds you of these events from your past:\n\n`;
 			for (const item of conversationHistory) {
-				prompt += `Prompt: ${item.prompt}\nResponse: ${item.response}\n\n`;
+				prompt += item.response.content;
+				//prompt += `Prompt: ${item.prompt.content}\nResponse: ${item.response.content}\n\n`;
 			}
 
 			messages.push({
@@ -65,7 +79,7 @@ export class RequestMessage {
 		return messages;
 	}
 
-	public generateConversationHistory(): { prompt: string; response: string }[] {
+	public generateConversationHistory(): { prompt: ChatCompletionRequestMessage; response: ChatCompletionResponseMessage }[] {
 		const conversationHistory = [];
 
 		for (const item of this.history) {
@@ -74,8 +88,8 @@ export class RequestMessage {
 			}
 
 			conversationHistory.push({
-				prompt: item.userPrompt.content,
-				response: item.gptResponse.content,
+				prompt: item.userPrompt,
+				response: item.gptResponse,
 			});
 		}
 
