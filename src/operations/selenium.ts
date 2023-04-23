@@ -5,7 +5,7 @@ import { config as cfg } from "@src/config";
 
 export default class Selenium {
 	public static getName(): string {
-		return "Browse web page with Selenium";
+		return "Selenium Web Browser";
 	}
 
 	public static getDescription(): string {

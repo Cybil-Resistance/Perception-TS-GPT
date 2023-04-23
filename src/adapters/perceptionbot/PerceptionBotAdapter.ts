@@ -2,9 +2,11 @@ import { ChatCompletionResponseMessage } from "openai";
 import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
-import FileWrite from "@src/operations/file_write";
+import { FileRead, FileWrite } from "@src/operations";
 import { CREATE_OPERATION, EDIT_OPERATION } from "./config/prompts";
 import path from "path";
+import fs from "fs";
+import highlight from "cli-highlight";
 
 export default class PerceptionBotAdapter {
 	public static getName(): string {
@@ -33,7 +35,7 @@ export default class PerceptionBotAdapter {
 					await this.createOperation();
 					break;
 				case "edit":
-					//await this.editOperation();
+					await this.editOperation();
 					break;
 				case "test":
 					//await this.createTestOperation();
@@ -55,54 +57,108 @@ export default class PerceptionBotAdapter {
 			runOperation = false;
 
 			// Construct the request message
-			let response = await this.callOpenAi(
+			const response = await this.callOpenAi(
 				CREATE_OPERATION.replaceAll("{{CLASS_NAME}}", nameOfClass).replaceAll("{{OPERATION}}", funcOfOperation),
 			);
 
-			do {
-				// Report the response to the user
-				console.log(`\nGPT Response:\n${response.content}\n`);
+			// Report the response to the user
+			this.clearConsole();
+			this.printCode(response.content);
 
-				// Check if the user wants to save the operation
-				const nextOperation: string = await PromptCLI.select("Would you like to do next?", [
-					{ title: "Save File", value: "save" },
-					{ title: "Edit File", value: "edit" },
-					{ title: "Try Again", value: "retry" },
-					{ title: "Cancel", value: "cancel" },
-				]);
-
-				if (nextOperation === "save") {
-					// Prompt the user for the filename
-					let filename: string = await PromptCLI.text("What would you like to name the file? (include the extension)");
-
-					// For this filename, strip any slashes
-					filename = filename.replaceAll("/", "");
-
-					// Save the operation
-					FileWrite.setWorkingDirectory(path.resolve(process.cwd() + "/src/operations"));
-					FileWrite.run(path.resolve(process.cwd() + "/src/operations/" + filename), response.content);
-
-					// Exit
-					runOperation = false;
-					break;
-				} else if (nextOperation === "edit") {
-					// Prompt the user for the edits they want to make
-					const edits: string = await PromptCLI.text("What edits would you like to make?");
-
-					// Construct the request message
-					response = await this.callOpenAi(
-						EDIT_OPERATION.replaceAll("{{EDITS}}", edits).replaceAll("{{CODE}}", response.content),
-					);
-				} else if (nextOperation === "retry") {
-					runOperation = true;
-					break;
-				} else if (nextOperation === "cancel") {
-					runOperation = false;
-					break;
-				}
-				// eslint-disable-next-line no-constant-condition
-			} while (true);
+			// Enter the operation loop
+			await this.operationLoop(response.content);
 		}
+	}
+
+	private static async operationLoop(content: string): Promise<string> {
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			// Check if the user wants to save the operation
+			const nextOperation: string = await PromptCLI.select("Would you like to do next?", [
+				{ title: "Save File", value: "save" },
+				{ title: "Edit File", value: "edit" },
+				{ title: "Try Again", value: "retry" },
+				{ title: "Cancel", value: "cancel" },
+			]);
+
+			if (nextOperation === "save") {
+				await this.promptFileSave(content);
+				return "saved";
+			} else if (nextOperation === "edit") {
+				const response: ChatCompletionResponseMessage = await this.promptFileEdit(content);
+				content = response.content;
+
+				// Report the response to the user
+				this.clearConsole();
+				this.printCode(content);
+			} else if (nextOperation === "cancel") {
+				return "cancel";
+			}
+		}
+	}
+
+	public static async getOperationsFilenames(): Promise<string[]> {
+		// Get all of the files in the operations directory
+		const dir = path.resolve(process.cwd() + "/src/operations");
+		const files = fs.readdirSync(dir);
+
+		// Return all operations, except for index.ts
+		return files.filter((file) => file !== "index.ts");
+	}
+
+	private static async editOperation(): Promise<void> {
+		// Get all of the current operations
+		const operations: string[] = await this.getOperationsFilenames();
+
+		// Prompt the user for the operation they want to edit
+		const operation: string = await PromptCLI.select(
+			"Which operation would you like to edit?",
+			operations.map((op) => {
+				return { title: op, value: op };
+			}),
+		);
+
+		// Read and display the current file
+		FileRead.setWorkingDirectory(path.resolve(process.cwd() + "/src/operations"));
+		const file: string = FileRead.run(operation);
+
+		this.clearConsole();
+		this.printCode(file);
+
+		const response = await this.promptFileEdit(file);
+
+		// Display the latest response & enter the operation loop
+		this.clearConsole();
+		this.printCode(response.content);
+		await this.operationLoop(response.content);
+	}
+
+	private static printCode(code: string): void {
+		console.log(highlight(code, { language: "typescript", ignoreIllegals: true }));
+	}
+
+	private static clearConsole(): void {
+		console.clear();
+	}
+
+	private static async promptFileEdit(content: string): Promise<ChatCompletionResponseMessage> {
+		// Prompt the user for the edits they want to make
+		const edits: string = await PromptCLI.text("What edits would you like to make?");
+
+		// Construct the request message
+		return await this.callOpenAi(EDIT_OPERATION.replaceAll("{{EDITS}}", edits).replaceAll("{{CODE}}", content));
+	}
+
+	private static async promptFileSave(content: string): Promise<void> {
+		// Prompt the user for the filename
+		let filename: string = await PromptCLI.text("What would you like to name the file? (include the extension)");
+
+		// For this filename, strip any slashes
+		filename = filename.replaceAll("/", "");
+
+		// Save the operation
+		FileWrite.setWorkingDirectory(path.resolve(process.cwd() + "/src/operations"));
+		FileWrite.run(path.resolve(process.cwd() + "/src/operations/" + filename), content);
 	}
 
 	private static async callOpenAi(userPrompt: string): Promise<ChatCompletionResponseMessage> {

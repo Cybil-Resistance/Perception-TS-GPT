@@ -38,6 +38,7 @@
 	},
 	"dependencies": {
 		"@types/prompts": "^2.4.4",
+		"cli-highlight": "^2.1.11",
 		"dotenv": "^16.0.3",
 		"googleapis": "^118.0.0",
 		"jsdom": "^21.1.1",
