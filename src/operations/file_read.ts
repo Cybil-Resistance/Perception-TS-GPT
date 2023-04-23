@@ -1,6 +1,10 @@
 import fs from "fs";
 import path from "path";
 
+/**
+ * The operation should be able to read to a file. It should only use synchronous methods. It should also allow setting the working directory, and it should not allow reading from files or folders that are outside of the working directory or its children.
+ **/
+
 export default class FileRead {
 	private static workingDirectory: string;
 
