@@ -24,4 +24,14 @@ export class PromptCLI {
 
 		return prompt;
 	}
+
+	public static async confirm(message: string): Promise<boolean> {
+		const { prompt } = await prompts({
+			type: "confirm",
+			name: "prompt",
+			message,
+		});
+
+		return prompt;
+	}
 }

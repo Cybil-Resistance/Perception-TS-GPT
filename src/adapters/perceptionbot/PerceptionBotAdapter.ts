@@ -3,7 +3,7 @@ import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
 import { FileRead, FileWrite } from "@src/operations";
-import { CREATE_OPERATION, EDIT_OPERATION } from "./config/prompts";
+import { CREATE_OPERATION, EDIT_OPERATION, CREATE_TEST_OPERATION, EDIT_TEST_OPERATION } from "./config/prompts";
 import path from "path";
 import fs from "fs";
 import highlight from "cli-highlight";
@@ -27,7 +27,7 @@ export default class PerceptionBotAdapter {
 			const prompt: string = await PromptCLI.select("What would you like to do?", [
 				{ title: "Create a new operation", value: "create" },
 				{ title: "Edit an existing operation", value: "edit" },
-				{ title: "Create a mocha test for an existing operation", value: "test" },
+				{ title: "Create or edit a mocha test for an existing operation", value: "test" },
 				{ title: "Go back", value: "back" },
 			]);
 
@@ -39,7 +39,7 @@ export default class PerceptionBotAdapter {
 					await this.editOperation();
 					break;
 				case "test":
-					//await this.createTestOperation();
+					await this.createTestOperation();
 					break;
 				default:
 					return;
@@ -101,7 +101,52 @@ export default class PerceptionBotAdapter {
 		await this.operationLoop(response.content, operation);
 	}
 
-	private static async operationLoop(content: string, filename?: string): Promise<string> {
+	private static async createTestOperation(): Promise<void> {
+		// Get all of the current operations
+		const operations: string[] = await this.getOperationsFilenames();
+
+		// Prompt the user for the operation they want to edit
+		const operation: string = await PromptCLI.select(
+			"Which operation would you like to add or edit tests for?",
+			operations.map((op) => {
+				return { title: op, value: op };
+			}),
+		);
+
+		// Read the current file
+		FileRead.setWorkingDirectory(path.resolve(process.cwd() + "/src/operations"));
+		const file: string = FileRead.run(operation);
+
+		// Determine if tests already exist for this operation
+		let openAiContext = CREATE_TEST_OPERATION.replaceAll("{{CODE}}", file);
+		if (fs.existsSync(path.resolve(process.cwd() + "/test/" + operation))) {
+			// Read the test file
+			FileRead.setWorkingDirectory(path.resolve(process.cwd() + "/test/"));
+			const testFile: string = FileRead.run(operation);
+
+			openAiContext = EDIT_TEST_OPERATION.replaceAll("{{CODE}}", file).replaceAll("{{TEST_CODE}}", testFile);
+
+			/*
+			const overwrite: boolean = await PromptCLI.confirm("Tests already exist for this operation. Would you like to overwrite ?");
+
+			if (!overwrite) {
+				return;
+			}
+			*/
+		}
+
+		// Construct the request message
+		const response = await this.callOpenAi(openAiContext);
+
+		// Report the response to the user
+		this.clearConsole();
+		this.printCode(response.content);
+
+		// Enter the operation loop
+		await this.operationLoop(response.content, operation, path.resolve(process.cwd() + "/test/"));
+	}
+
+	private static async operationLoop(content: string, filename?: string, filepath?: string): Promise<string> {
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			// Check if the user wants to save the operation
@@ -113,7 +158,7 @@ export default class PerceptionBotAdapter {
 			]);
 
 			if (nextOperation === "save") {
-				await this.promptFileSave(content, filename);
+				await this.promptFileSave(content, filename, filepath);
 				return "saved";
 			} else if (nextOperation === "edit") {
 				const response: ChatCompletionResponseMessage | void = await this.promptFileEdit(content);
@@ -146,7 +191,7 @@ export default class PerceptionBotAdapter {
 	}
 
 	private static clearConsole(): void {
-		console.clear();
+		//console.clear();
 	}
 
 	private static async promptFileEdit(content: string): Promise<ChatCompletionResponseMessage | void> {
@@ -162,7 +207,7 @@ export default class PerceptionBotAdapter {
 		return await this.callOpenAi(EDIT_OPERATION.replaceAll("{{EDITS}}", edits).replaceAll("{{CODE}}", content));
 	}
 
-	private static async promptFileSave(content: string, filename?: string): Promise<void> {
+	private static async promptFileSave(content: string, filename?: string, filepath?: string): Promise<void> {
 		// If we don't have a filename, prompt the user for one
 		if (!filename) {
 			// Prompt the user for the filename
@@ -175,8 +220,8 @@ export default class PerceptionBotAdapter {
 		filename = filename.replaceAll("/", "");
 
 		// Save the operation
-		FileWrite.setWorkingDirectory(path.resolve(process.cwd() + "/src/operations"));
-		FileWrite.run(path.resolve(process.cwd() + "/src/operations/" + filename), content);
+		FileWrite.setWorkingDirectory(path.resolve(filepath || process.cwd() + "/src/operations"));
+		FileWrite.run(path.resolve(filepath || process.cwd() + "/src/operations/", filename), content);
 
 		// Log the filename
 		console.log(`Saved file: ${filename}`);
@@ -200,6 +245,4 @@ export default class PerceptionBotAdapter {
 
 		return response;
 	}
-
-	//private static async createTestOperation(): Promise<void> {}
 }

@@ -36,6 +36,8 @@ export class OpenAI {
 		temperature: number = 0,
 		n: number = 1,
 	): Promise<ChatCompletionResponseMessage> {
+		console.log("Waiting for OpenAI to respond...");
+
 		const completion = await this.openai.createChatCompletion({
 			model: model,
 			messages: messages,

@@ -30,8 +30,50 @@ export default class {{CLASS_NAME}} {
 
 export const EDIT_OPERATION = `Using the following code, modify it so that it meets the following requirements: {{EDITS}}
 
+Keep all comments within the code.
+
 Do not provide any context or explanation, only provide the code.
 
 """
 {{CODE}}
 """`;
+
+export const CREATE_TEST_OPERATION = `Using the following code, create a new mocha test that covers the functions within the code.
+
+Do not provide any context or explanation, only provide the code.
+
+The following is the reference code for the test:
+
+"""
+{{CODE}}
+"""
+
+Use the following template to create the test:
+
+"""
+import { expect } from "chai";
+
+import OPERATION from "@src/operations/OPERATION";
+
+describe("Operations: OPERATION_DESCRIPTION", function () {
+	TESTS GO HERE
+});
+"""
+`;
+
+export const EDIT_TEST_OPERATION = `Using the following mocha test framework code, update the test so that it covers the functions within the code.
+
+Do not provide any context or explanation, only provide the code.
+
+The following is the reference code for the test:
+
+"""
+{{CODE}}
+"""
+
+Modify the following existing test code:
+
+"""
+{{TEST_CODE}}
+"""
+`;
