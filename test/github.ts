@@ -1,15 +1,9 @@
 import { expect } from "chai";
 import { config as cfg } from "@src/config";
 import { Octokit } from "@octokit/rest";
-//import { PromptCLI } from "@src/classes/prompt";
 import Github from "@src/operations/github";
 
 describe("Operations: Github", function () {
-	it("should set the head branch correctly", function () {
-		Github.setBranch("main");
-		expect(Github["branch"]).to.equal("main");
-	});
-
 	it("should set the repo owner correctly", function () {
 		Github.setOwnerName("Cybil-Resistance");
 		expect(Github["ownerName"]).to.equal("Cybil-Resistance");
@@ -45,13 +39,29 @@ describe("Operations: Github", function () {
 		expect(branches[0]["name"]).to.equal("main");
 	});
 
-	it.skip("should create and push a test branch", async function () {
+	/**
+	 * These might be a little heavy on the github API, so sometimes worth skipping
+	 **/
+
+	it.skip("should create and push a test branch - make sure your user has write access to the repo", async function () {
 		// Get the latest commit SHA from this branch
-		const mainBranch = await Github.getBaseBranch("main");
-		await Github.createAndPushBranch("test", mainBranch.data.object.sha);
+		const mainBranch = await Github.getBranch("main");
+		await Github.createRemoteBranch("mocha-automated-testing-dummy", mainBranch.commit.sha);
 
 		// Check that the branch was created
-		//const testBranch = await Github.getBranch("test");
-		//expect(testBranch.commit.sha).to.equal(mainBranch.commit.sha);
+		const testBranch = await Github.getBranch("mocha-automated-testing-dummy");
+		expect(testBranch.commit.sha).to.equal(mainBranch.commit.sha);
+	});
+
+	// here is where we want to create a commit, send it, create a PR, and delete the PR, then delete the branch
+
+	it.skip("should delete the test branch", async function () {
+		await Github.deleteBranch("mocha-automated-testing-dummy");
+
+		// Check that the branch no longer exists
+		const branches = await Github.listBranches();
+		for (const branch of branches) {
+			expect(branch.name).to.not.equal("mocha-automated-testing-dummy");
+		}
 	});
 });

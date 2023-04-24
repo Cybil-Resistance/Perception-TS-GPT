@@ -1,6 +1,5 @@
 import { config as cfg } from "@src/config";
 import { Octokit } from "@octokit/rest";
-import { PromptCLI } from "@src/classes/prompt";
 
 /**
  * Operation: Github API wrapper
@@ -19,10 +18,6 @@ export default class Github {
 		return "Github features: create branch, switch branch, commit changes.";
 	}
 
-	public static setBranch(branch: string): void {
-		this.branch = branch;
-	}
-
 	public static setRepoName(repoName: string): void {
 		this.repoName = repoName;
 	}
@@ -31,23 +26,27 @@ export default class Github {
 		this.ownerName = ownerName;
 	}
 
-	public static async commit(): Promise<void> {
+	/*
+	public static async commit(commitMessage:string, branch?: string): Promise<void> {
 		// Connect to Github API
 		const octokit = new Octokit({
 			auth: cfg.GITHUB_API_KEY,
 			userAgent: cfg.GITHUB_USERNAME,
 		});
 
-		// Get current diff
-		const diff = await octokit.repos.compareCommits({
+		const currentCommit = await octokit.git.getCommit({
 			owner: this.ownerName,
 			repo: this.repoName,
-			base: this.branch,
-			head: this.branch,
+			commit_sha: newBranchRef.data.object.sha,
 		});
 
-		// Prompt user for commit message
-		const commitMessage = await PromptCLI.text("Enter commit message:");
+		const newCommit = await octokit.git.createCommit({
+			owner,
+			repo,
+			message: commitMessage,
+			tree: currentCommit.data.tree.sha,
+			parents: [currentCommit.data.sha],
+		});
 
 		// Create commit
 		await octokit.git.createCommit({
@@ -57,6 +56,25 @@ export default class Github {
 			tree: diff.data.base_commit.tree.sha,
 			head: this.branch,
 		});
+	}
+	*/
+
+	public static async listBranches(): Promise<string[]> {
+		const { GITHUB_API_KEY } = cfg;
+		const octokit = new Octokit({
+			auth: GITHUB_API_KEY,
+		});
+
+		try {
+			const response = await octokit.rest.repos.listBranches({
+				owner: this.ownerName,
+				repo: this.repoName,
+			});
+			return response.data;
+		} catch (error) {
+			console.error(error);
+			return [];
+		}
 	}
 
 	public static async getBranch(branch: string): Promise<any> {
@@ -78,76 +96,36 @@ export default class Github {
 		}
 	}
 
-	public static async switchBranch(branchName: string, commitSHA: string): Promise<void> {
-		const { GITHUB_API_KEY } = cfg;
+	public static async createRemoteBranch(branchName: string, commitSHA: string): Promise<void> {
 		const octokit = new Octokit({
-			auth: GITHUB_API_KEY,
+			auth: cfg.GITHUB_API_KEY,
+			userAgent: cfg.GITHUB_USERNAME,
 		});
 
 		try {
-			await octokit.rest.git.updateRef({
-				owner: this.ownerName,
-				repo: this.repoName,
-				ref: `heads/${branchName}`,
-				sha: commitSHA,
-				force: true,
-			});
-			console.log(`Switched to branch: ${branchName}`);
-			this.setBranch(branchName);
-		} catch (error) {
-			console.error(error);
-		}
-	}
-
-	public static async listBranches(): Promise<string[]> {
-		const { GITHUB_API_KEY } = cfg;
-		const octokit = new Octokit({
-			auth: GITHUB_API_KEY,
-		});
-
-		try {
-			const response = await octokit.rest.repos.listBranches({
-				owner: this.ownerName,
-				repo: this.repoName,
-			});
-			return response.data;
-		} catch (error) {
-			console.error(error);
-			return [];
-		}
-	}
-
-	public static async getBaseBranch(branchName: string): Promise<void> {
-		const { GITHUB_API_KEY } = cfg;
-		const octokit = new Octokit({
-			auth: GITHUB_API_KEY,
-		});
-
-		const baseBranchRef = await octokit.rest.git.getRef({
-			owner: this.ownerName,
-			repo: this.repoName,
-			ref: `heads/${branchName}`,
-		});
-
-		return baseBranchRef;
-	}
-
-	public static async createAndPushBranch(branchName: string, commitSHA: string): Promise<void> {
-		const { GITHUB_API_KEY } = cfg;
-		const octokit = new Octokit({
-			auth: GITHUB_API_KEY,
-		});
-
-		try {
-			await octokit.rest.git.createRef({
+			await octokit.git.createRef({
 				owner: this.ownerName,
 				repo: this.repoName,
 				ref: `refs/heads/${branchName}`,
 				sha: commitSHA,
 			});
-			console.log(`Created and pushed new branch: ${branchName}`);
+		} catch (error) {
+			console.error(error);
+		}
+	}
 
-			this.setBranch(branchName);
+	public static async deleteBranch(branchName: string): Promise<void> {
+		const octokit = new Octokit({
+			auth: cfg.GITHUB_API_KEY,
+			userAgent: cfg.GITHUB_USERNAME,
+		});
+
+		try {
+			await octokit.git.deleteRef({
+				owner: this.ownerName,
+				repo: this.repoName,
+				ref: `heads/${branchName}`,
+			});
 		} catch (error) {
 			console.error(error);
 		}
