@@ -1,9 +1,32 @@
 import { expect } from "chai";
 import { config as cfg } from "@src/config";
 import { Octokit } from "@octokit/rest";
+import Git from "@src/operations/git";
 import Github from "@src/operations/github";
 
 describe("Operations: Github", function () {
+	let skipTests: boolean = false;
+	const testBranchName = "mocha-automated-testing-dummy";
+
+	before(async function () {
+		const repoPath = process.cwd();
+		Git.setRepo(repoPath);
+
+		// If there's an active diff, do not run this test
+		const diff = await Git.diff();
+		if (diff) {
+			console.log("There is an active diff, skipping some Git tests.");
+			skipTests = true;
+		}
+
+		// If there's an active commit, do not run this test
+		const status = await Git.status();
+		if (status.ahead > 0) {
+			console.log("There is an active commit, skipping some Git tests.");
+			skipTests = true;
+		}
+	});
+
 	it("should set the repo owner correctly", function () {
 		Github.setOwnerName("Cybil-Resistance");
 		expect(Github["ownerName"]).to.equal("Cybil-Resistance");
@@ -45,24 +68,71 @@ describe("Operations: Github", function () {
 	 **/
 
 	it.skip("should create and push a test branch - make sure your user has write access to the repo", async function () {
+		if (skipTests) {
+			this.skip();
+		}
+
 		// Get the latest commit SHA from this branch
 		const mainBranch = await Github.getBranch("main");
-		await Github.createRemoteBranch("mocha-automated-testing-dummy", mainBranch.commit.sha);
+		await Github.createRemoteBranch(testBranchName, mainBranch.commit.sha);
 
 		// Check that the branch was created
-		const testBranch = await Github.getBranch("mocha-automated-testing-dummy");
+		const testBranch = await Github.getBranch(testBranchName);
 		expect(testBranch.commit.sha).to.equal(mainBranch.commit.sha);
 	});
 
-	// here is where we want to create a commit, send it, create a PR, and delete the PR, then delete the branch
+	// Using the test branch created above, and the Git operations, create a commit, and push it to the test branch, create a PR
+	it.skip("should create a commit and push it to the test branch", async function () {
+		if (skipTests) {
+			this.skip();
+		}
+
+		const files = ["./tmp/test1.txt", "./tmp/test2.txt"];
+		const dummyText = "Lorem ipsum dolor sit amet";
+
+		if (!fs.existsSync("tmp")) {
+			fs.mkdirSync("tmp");
+		}
+
+		fs.writeFileSync(files[0], dummyText);
+		fs.writeFileSync(files[1], dummyText);
+
+		// Setup the repo
+		const repoPath = process.cwd();
+		Git.setRepo(repoPath);
+
+		// Connect to the remote branch
+		await Git.pull();
+		await Git.checkout(testBranchName);
+
+		// Add the files
+		await Git.add(files);
+		const diff = await Git.diff();
+		expect(diff).to.not.be.empty;
+
+		// Create the commit
+		const message = "Automated Mocha test commit";
+		await Git.commit(message);
+		const status = await Git.status();
+		expect(status.ahead).to.equal(1);
+
+		// Push the commit
+
+
+
+	});
 
 	it.skip("should delete the test branch", async function () {
-		await Github.deleteBranch("mocha-automated-testing-dummy");
+		if (skipTests) {
+			this.skip();
+		}
+
+		await Github.deleteBranch(testBranchName);
 
 		// Check that the branch no longer exists
 		const branches = await Github.listBranches();
 		for (const branch of branches) {
-			expect(branch.name).to.not.equal("mocha-automated-testing-dummy");
+			expect(branch.name).to.not.equal(testBranchName);
 		}
 	});
 });

@@ -1,4 +1,5 @@
-import simpleGit, { SimpleGit, ResetOptions, StatusResult } from "simple-git";
+import simpleGit, { SimpleGit, ResetOptions, StatusResult, BranchSummary } from "simple-git";
+import { config as cfg } from "@src/config";
 
 /**
  * Operation Prompt: Using the Simple Git npm dependency, include static public functions that allow for setting the local repository to work from, a function to add files to source control, a function to check the diff of the current changes against the current active remote branch, a function to check the current status of the active source code, and a function to commit the changes.
@@ -6,6 +7,7 @@ import simpleGit, { SimpleGit, ResetOptions, StatusResult } from "simple-git";
 
 export default class Git {
 	private static git: SimpleGit;
+	public static branchName: string;
 
 	public static getName(): string {
 		return "Git Operations";
@@ -15,8 +17,19 @@ export default class Git {
 		return "A class that performs Git operations using the Simple Git npm dependency.";
 	}
 
-	public static setRepo(repoPath: string): void {
+	public static async setRepo(repoPath: string): void {
 		this.git = simpleGit(repoPath);
+
+		// Iterate through the branches and find the current branch
+		let branches = await this.branches();
+		if (branches) {
+			for (const branch in branches.branches) {
+				if (branches.branches[branch].current) {
+					this.branchName = branch;
+					break;
+				}
+			}
+		}
 	}
 
 	public static async add(files: string[]): Promise<void> {
@@ -37,6 +50,29 @@ export default class Git {
 
 	public static async status(): Promise<StatusResult> {
 		return await this.git.status();
+	}
+
+	public static async branches(): Promise<BranchSummary> {
+		return await this.git.branch();
+	}
+
+	public static async pull(): Promise<void> {
+		await this.git.pull();
+	}
+
+	public static async push(): Promise<void> {
+		const remote = await this.git.getConfig('remote.origin.url');
+		if (!remote) {
+			throw new Error("No remote repository found.");
+		}
+
+		const remoteUrl = remote.value.replace(/\:\/\/([^@]*@?)github/, `://${cfg.GITHUB_USERNAME}:${cfg.GITHUB_API_KEY}@github`);
+		await this.git.push(remoteUrl, this.branchName);
+	}
+
+	public static async checkout(branchName: string): Promise<void> {
+		this.branchName = branchName;
+		await this.git.checkout(this.branchName);
 	}
 
 	public static async commit(message: string): Promise<void> {
