@@ -5,7 +5,7 @@ import Git from "@src/operations/Git";
 
 describe("Operations: Git Operations", function () {
 	let skipTests: boolean = false;
-	const testBranchName = "mocha-automated-testing-dummy";
+	const testBranchName = "mocha-automated-testing-dummy-" + (Math.random() * 100000000).toString();
 
 	before(async function () {
 		const repoPath = process.cwd();
@@ -122,7 +122,9 @@ describe("Operations: Git Operations", function () {
 	});
 
 	after(async function () {
-		await Git.checkout("main");
-		await Git.deleteLocalBranch(testBranchName);
+		if (!skipTests) {
+			await Git.checkout("main");
+			await Git.deleteLocalBranch(testBranchName, true);
+		}
 	});
 });

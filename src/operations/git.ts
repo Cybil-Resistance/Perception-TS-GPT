@@ -92,8 +92,8 @@ export default class Git {
 		}
 	}
 
-	public static async deleteLocalBranch(branchName: string): Promise<void> {
-		await this.git.deleteLocalBranch(branchName);
+	public static async deleteLocalBranch(branchName: string, force: boolean = false): Promise<void> {
+		await this.git.deleteLocalBranch(branchName, force);
 	}
 
 	public static async commit(message: string): Promise<void> {
