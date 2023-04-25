@@ -71,8 +71,16 @@ export default class Git {
 	}
 
 	public static async checkout(branchName: string): Promise<void> {
+		// To be explicit about this
+		const oldBranchName = this.branchName;
 		this.branchName = branchName;
-		await this.git.checkout(this.branchName, ["-b"]);
+
+		// Checkout the branch, if it doesn't exist, then create it
+		try {
+			await this.git.checkout(this.branchName);
+		} catch (ex) {
+			await this.git.checkoutBranch(this.branchName, oldBranchName);
+		}
 	}
 
 	public static async commit(message: string): Promise<void> {
