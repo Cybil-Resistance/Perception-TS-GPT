@@ -72,8 +72,8 @@ describe("Operations: Git Operations", function () {
 		fs.appendFileSync(files[1], dummyText);
 
 		await Git.add(files);
-		const diff = await Git.diff();
-		expect(diff).to.not.be.empty;
+		const status = await Git.status();
+		expect(status.created).to.not.be.empty;
 	});
 
 	it("should check the diff of the current changes against the current active remote branch", async function () {
@@ -81,7 +81,7 @@ describe("Operations: Git Operations", function () {
 			this.skip();
 		}
 
-		const diff = await Git.diff();
+		const diff = await Git.diff(["HEAD"]);
 		expect(diff).to.not.be.empty;
 	});
 
@@ -121,5 +121,9 @@ describe("Operations: Git Operations", function () {
 		await Git.reset({ "--hard": null, "origin/main": null });
 		const status = await Git.status();
 		expect(status.ahead).to.equal(0);
+	});
+
+	after(async function () {
+		await Git.checkout("main");
 	});
 });

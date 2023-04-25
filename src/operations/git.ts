@@ -44,8 +44,8 @@ export default class Git {
 		}
 	}
 
-	public static async diff(): Promise<string> {
-		return await this.git.diff();
+	public static async diff(options?:any): Promise<string> {
+		return await this.git.diff(options);
 	}
 
 	public static async status(): Promise<StatusResult> {
