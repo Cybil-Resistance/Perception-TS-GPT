@@ -6,7 +6,6 @@ import { Octokit } from "@octokit/rest";
  **/
 
 export default class Github {
-	private static branch: string = "main";
 	private static repoName: string;
 	private static ownerName: string;
 

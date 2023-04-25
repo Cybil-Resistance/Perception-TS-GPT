@@ -4,7 +4,7 @@ Update the operation name, description, run arguments, run return type, and the 
 
 Keep all comments within the code.
 
-Do not provide any context or explanation, only provide the code.
+Do not provide any context or explanation, only provide the code. Keep the getName() and getDescription() functions, and edit their contents appropriately.
 
 """
 import { config as cfg } from "@src/config";
