@@ -14,14 +14,14 @@ describe("Operations: Git Operations", function () {
 		// If there's an active diff, do not run this test
 		const diff = await Git.diff();
 		if (diff) {
-			console.log("There is an active diff, skipping some Git tests.");
+			console.warn("There is an active diff, skipping some Git tests.");
 			skipTests = true;
 		}
 
 		// If there's an active commit, do not run this test
 		const status = await Git.status();
 		if (status.ahead > 0) {
-			console.log("There is an active commit, skipping some Git tests.");
+			console.warn("There is an active commit, skipping some Git tests.");
 			skipTests = true;
 		}
 	});

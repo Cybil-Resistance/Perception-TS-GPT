@@ -72,7 +72,7 @@ export default class Git {
 
 	public static async checkout(branchName: string): Promise<void> {
 		this.branchName = branchName;
-		await this.git.checkout(this.branchName);
+		await this.git.checkout(this.branchName, ["-b"]);
 	}
 
 	public static async commit(message: string): Promise<void> {
