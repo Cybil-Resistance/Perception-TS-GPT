@@ -37,7 +37,6 @@
 		"typescript": "~5.0"
 	},
 	"dependencies": {
-		"@octokit/rest": "^19.0.7",
 		"@types/prompts": "^2.4.4",
 		"cli-highlight": "^2.1.11",
 		"dotenv": "^16.0.3",

@@ -3,9 +3,14 @@ import fs from "fs";
 
 import Git from "@src/operations/Git";
 
-describe("Operations: Git Operations", function () {
+describe.skip("Operations: Git Operations", function () {
 	let skipTests: boolean = false;
 	const testBranchName = "mocha-automated-testing-dummy-" + (Math.random() * 100000000).toString();
+
+	/**
+	 * Okay it passed initial tests, but it's pretty chaotic.
+	 * The best thing to do here would be to create a temporary git repo for use, or a dedicated testing repo.
+	 */
 
 	before(async function () {
 		const repoPath = process.cwd();
