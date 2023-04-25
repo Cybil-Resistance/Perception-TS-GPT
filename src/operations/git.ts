@@ -92,6 +92,10 @@ export default class Git {
 		}
 	}
 
+	public static async deleteLocalBranch(branchName: string): Promise<void> {
+		await this.git.deleteLocalBranch(branchName);
+	}
+
 	public static async commit(message: string): Promise<void> {
 		await this.git.commit(message);
 	}

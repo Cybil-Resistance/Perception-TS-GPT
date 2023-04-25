@@ -125,5 +125,6 @@ describe("Operations: Git Operations", function () {
 
 	after(async function () {
 		await Git.checkout("main");
+		await Git.deleteLocalBranch(testBranchName);
 	});
 });
