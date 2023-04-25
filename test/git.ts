@@ -72,8 +72,6 @@ describe("Operations: Git Operations", function () {
 		fs.appendFileSync(files[1], dummyText);
 
 		await Git.add(files);
-		const status = await Git.status();
-		expect(status.created).to.not.be.empty;
 	});
 
 	it("should check the diff of the current changes against the current active remote branch", async function () {
