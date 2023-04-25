@@ -1,5 +1,5 @@
 import simpleGit, { SimpleGit, ResetOptions, StatusResult, BranchSummary } from "simple-git";
-import { config as cfg } from "@src/config";
+//import { config as cfg } from "@src/config";
 
 /**
  * Operation Prompt: Using the Simple Git npm dependency, include static public functions that allow for setting the local repository to work from, a function to add files to source control, a function to check the diff of the current changes against the current active remote branch, a function to check the current status of the active source code, and a function to commit the changes.
@@ -45,7 +45,7 @@ export default class Git {
 	}
 
 	public static async diff(): Promise<string> {
-		return await this.git.diff(["HEAD"]);
+		return await this.git.diff();
 	}
 
 	public static async status(): Promise<StatusResult> {
@@ -61,6 +61,8 @@ export default class Git {
 	}
 
 	public static async push(): Promise<void> {
+		/*
+		// Ideally, I would like to change the local configuration to use the API key, but I'm not sure how to do that
 		const remote = await this.git.getConfig('remote.origin.url');
 		if (!remote) {
 			throw new Error("No remote repository found.");
@@ -68,6 +70,13 @@ export default class Git {
 
 		const remoteUrl = remote.value.replace(/\:\/\/([^@]*@?)github/, `://${cfg.GITHUB_USERNAME}:${cfg.GITHUB_API_KEY}@github`);
 		await this.git.push(remoteUrl, this.branchName);
+		*/
+		const remote = await this.git.getConfig('remote.origin.url');
+		if (!remote) {
+			throw new Error("No remote repository found.");
+		}
+
+		await this.git.push(remote.value, this.branchName);
 	}
 
 	public static async checkout(branchName: string): Promise<void> {

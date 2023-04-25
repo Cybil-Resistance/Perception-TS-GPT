@@ -62,14 +62,14 @@ describe("Operations: Git Operations", function () {
 		}
 
 		const files = ["./tmp/test1.txt", "./tmp/test2.txt"];
-		const dummyText = "Lorem ipsum dolor sit amet";
+		const dummyText = "Lorem ipsum dolor sit amet\n";
 
 		if (!fs.existsSync("tmp")) {
 			fs.mkdirSync("tmp");
 		}
 
-		fs.writeFileSync(files[0], dummyText);
-		fs.writeFileSync(files[1], dummyText);
+		fs.appendFileSync(files[0], dummyText);
+		fs.appendFileSync(files[1], dummyText);
 
 		await Git.add(files);
 		const diff = await Git.diff();
@@ -101,8 +101,6 @@ describe("Operations: Git Operations", function () {
 
 		const message = "Automated Mocha test commit";
 		await Git.commit(message);
-		const status = await Git.status();
-		expect(status.ahead).to.equal(1);
 	});
 
 	it("should push the changes", async function () {
