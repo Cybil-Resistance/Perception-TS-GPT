@@ -9,6 +9,12 @@ describe("Operations: Write to file", () => {
 	const badTestFilePath = workingDirectory + "/../test-output.txt";
 	const testFileContents = "This is a test file.";
 
+	before(async () => {
+		if (!fs.existsSync(workingDirectory)) {
+			fs.mkdirSync(workingDirectory);
+		}
+	});
+
 	afterEach(async () => {
 		try {
 			fs.unlinkSync(testFilePath);
