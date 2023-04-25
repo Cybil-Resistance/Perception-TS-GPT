@@ -19,11 +19,12 @@ describe("Operations: Github", function () {
 			auth: cfg.GITHUB_API_KEY,
 			userAgent: cfg.GITHUB_USERNAME,
 		});
+
 		const diff = await octokit.repos.compareCommits({
 			owner: Github["ownerName"],
 			repo: Github["repoName"],
-			base: Github["branch"],
-			head: Github["branch"],
+			base: "main",
+			head: "main",
 		});
 		expect(diff).to.not.be.undefined;
 		expect(diff).to.have.property("data");

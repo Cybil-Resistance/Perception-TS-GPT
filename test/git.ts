@@ -94,7 +94,7 @@ describe("Operations: Git Operations", function () {
 			this.skip();
 		}
 
-		await Git.reset({ '--hard': null, 'origin/main' : null });
+		await Git.reset({ "--hard": null, "origin/main": null });
 		const status = await Git.status();
 		expect(status.ahead).to.equal(0);
 	});

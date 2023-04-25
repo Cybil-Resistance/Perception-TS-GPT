@@ -23,7 +23,7 @@ export default class Git {
 		await this.git.add(files);
 	}
 
-	public static async rm(files: string[], keepLocal:boolean = true): Promise<void> {
+	public static async rm(files: string[], keepLocal: boolean = true): Promise<void> {
 		if (keepLocal) {
 			await this.git.rmKeepLocal(files);
 		} else {
