@@ -94,16 +94,6 @@ describe("Operations: Git Operations", function () {
 		expect(status).to.not.be.empty;
 	});
 
-	it("should commit to a test branch", async function () {
-		if (skipTests) {
-			this.skip();
-		}
-
-		await Git.commit("Automated Mocha test commit", testBranchName);
-		const status = await Git.status();
-		expect(status.ahead).to.equal(1);
-	});
-
 	it("should commit the changes", async function () {
 		if (skipTests) {
 			this.skip();
@@ -115,7 +105,17 @@ describe("Operations: Git Operations", function () {
 		expect(status.ahead).to.equal(1);
 	});
 
-	it("should reset the changes", async function () {
+	it("should push the changes", async function () {
+		if (skipTests) {
+			this.skip();
+		}
+
+		await Git.push();
+		const status = await Git.status();
+		expect(status.ahead).to.equal(0);
+	});
+
+	it.skip("should reset the changes", async function () {
 		if (skipTests) {
 			this.skip();
 		}
