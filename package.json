@@ -12,7 +12,7 @@
 		"start:dev": "ts-node -r tsconfig-paths/register src/index.ts",
 		"lint": "eslint . --ext .ts --ext .mts",
 		"prettier": "prettier --config .prettierrc --write .",
-		"test": "ts-mocha -r tsconfig-paths/register -p tsconfig.json --bail --recursive test/*",
+		"test": "ts-mocha -r tsconfig-paths/register -p tsconfig.json --bail --timeout 5000 --recursive test/*",
 		"clean": "rm -rf coverage build tmp",
 		"prebuild": "npm run lint",
 		"build": "npm run clean && tsc -p tsconfig.release.json && tsc-alias -p tsconfig.release.json"

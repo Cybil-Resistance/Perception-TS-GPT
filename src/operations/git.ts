@@ -44,7 +44,7 @@ export default class Git {
 		}
 	}
 
-	public static async diff(options?:any): Promise<string> {
+	public static async diff(options?: any): Promise<string> {
 		return await this.git.diff(options);
 	}
 
@@ -71,7 +71,7 @@ export default class Git {
 		const remoteUrl = remote.value.replace(/\:\/\/([^@]*@?)github/, `://${cfg.GITHUB_USERNAME}:${cfg.GITHUB_API_KEY}@github`);
 		await this.git.push(remoteUrl, this.branchName);
 		*/
-		const remote = await this.git.getConfig('remote.origin.url');
+		const remote = await this.git.getConfig("remote.origin.url");
 		if (!remote) {
 			throw new Error("No remote repository found.");
 		}

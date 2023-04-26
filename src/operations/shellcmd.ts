@@ -11,15 +11,15 @@ export default class ShellCommand {
 		return "Executes an arbitrary shell command that is passed in as an argument, and captures the output and errors to return.";
 	}
 
-	public static async run(command: string): Promise<{ stdout: string, stderr: string }> {
-		const util = require('util');
-		const exec = util.promisify(require('child_process').exec);
+	public static async run(command: string): Promise<{ stdout: string; stderr: string }> {
+		const util = require("util");
+		const exec = util.promisify(require("child_process").exec);
 
 		try {
 			const { stdout, stderr } = await exec(command);
 			return { stdout, stderr };
 		} catch (error) {
-			return { stdout: '', stderr: error.message };
+			return { stdout: "", stderr: error.message };
 		}
 	}
 }

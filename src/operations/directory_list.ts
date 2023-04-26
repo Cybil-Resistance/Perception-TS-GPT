@@ -14,7 +14,7 @@ export default class DirectoryList {
 		return "Get all files and folders in a path and return a JSON structure that mimics the folder-file structure.";
 	}
 
-	public static async run(_path: string, deepRecursive: boolean = false): Promise<object> {
+	public static async run(_path: string, deepRecursive: boolean = false, flatten: boolean = false): Promise<object> {
 		const result = {};
 		const stats = fs.statSync(_path);
 
@@ -26,7 +26,7 @@ export default class DirectoryList {
 				const fileStats = fs.statSync(filePath);
 
 				if (fileStats.isDirectory()) {
-					if (deepRecursive) {
+					if (deepRecursive && !this.ignoreDirectory(file)) {
 						result[file] = await this.run(filePath, deepRecursive);
 					} else {
 						result[file] = {};
@@ -35,7 +35,7 @@ export default class DirectoryList {
 					const extension = path.extname(file);
 					result[file] = {
 						type: "file",
-						filetype: extension ? extension.slice(1) : null
+						filetype: extension ? extension.slice(1) : null,
 					};
 				}
 			}
@@ -43,6 +43,28 @@ export default class DirectoryList {
 			throw new Error("Path is not a directory.");
 		}
 
-		return result;
+		if (flatten) {
+			// New function to flatten keys and append list of keys that lead up to it
+			const flattenKeys = (obj, prefix = "") => {
+				let flattenedKeys: string[] = [];
+				for (let key in obj) {
+					// If the value is an object, recursively call the function
+					if (typeof obj[key] === "object") {
+						flattenedKeys.push(prefix ? prefix + "/" + key : key);
+						flattenedKeys.push(...flattenKeys(obj[key], prefix ? prefix + "/" + key : key));
+					}
+				}
+				return flattenedKeys;
+			};
+
+			return flattenKeys(result);
+		} else {
+			return result;
+		}
+	}
+
+	private static ignoreDirectory(directory: string): boolean {
+		const ignoreDirectories = ["node_modules", ".git", ".vscode", "dist", "build"];
+		return ignoreDirectories.includes(directory);
 	}
 }
