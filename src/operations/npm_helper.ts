@@ -9,6 +9,10 @@ export default class NpmHelper {
 		return "Receive an array of filepaths, open all of those files and find all import and require statements. Pull the packages out of the import and require statements, and create a list of all imported packages.";
 	}
 
+	public static getBuiltInNodeModules(): string[] {
+		return require('repl')._builtinLibs;
+	}
+
 	public static async run(filePaths: string[]): Promise<string[]> {
 		const importedPackages: string[] = [];
 
@@ -39,6 +43,7 @@ export default class NpmHelper {
 		}
 
 		// Remove duplicates and return the list of imported packages
-		return [...new Set(importedPackages)];
+		const builtInNodeModules = this.getBuiltInNodeModules();
+		return [...new Set(importedPackages)].filter((packageName) => (!builtInNodeModules.includes(packageName)));
 	}
 }
