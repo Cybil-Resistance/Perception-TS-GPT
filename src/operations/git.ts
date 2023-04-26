@@ -1,4 +1,4 @@
-import simpleGit, { SimpleGit, ResetOptions, StatusResult, BranchSummary } from "simple-git";
+import simpleGit, { SimpleGit, ResetOptions, StatusResult, BranchSummary, TaskOptions } from "simple-git";
 
 /**
  * Operation Prompt: Using the Simple Git npm dependency, include static public functions that allow for setting the local repository to work from, a function to add files to source control, a function to check the diff of the current changes against the current active remote branch, a function to check the current status of the active source code, and a function to commit the changes.
@@ -22,11 +22,11 @@ export default class Git {
 		await this.git.clone(repoUrl, repoPath);
 	}
 
-	public static async setRepo(repoPath: string): void {
+	public static async setRepo(repoPath: string): Promise<void> {
 		this.git = simpleGit(repoPath);
 
 		// Iterate through the branches and find the current branch
-		let branches = await this.branches();
+		const branches = await this.branches();
 		if (branches) {
 			for (const branch in branches.branches) {
 				if (branches.branches[branch].current) {
@@ -49,7 +49,7 @@ export default class Git {
 		}
 	}
 
-	public static async diff(options?: any): Promise<string> {
+	public static async diff(options?: TaskOptions): Promise<string> {
 		return await this.git.diff(options);
 	}
 

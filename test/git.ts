@@ -115,6 +115,6 @@ describe.skip("Operations: Git Operations", function () {
 		await Git.deleteLocalBranch(testBranchName, true);
 
 		// Remove the test repository
-		fs.rmSync(repoPath, { recursive: true })
+		fs.rmSync(repoPath, { recursive: true });
 	});
 });

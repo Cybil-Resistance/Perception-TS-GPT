@@ -10,7 +10,8 @@ export default class NpmHelper {
 	}
 
 	public static getBuiltInNodeModules(): string[] {
-		return require('repl')._builtinLibs;
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		return require("repl")._builtinLibs;
 	}
 
 	public static async run(filePaths: string[]): Promise<string[]> {
@@ -44,6 +45,6 @@ export default class NpmHelper {
 
 		// Remove duplicates and return the list of imported packages
 		const builtInNodeModules = this.getBuiltInNodeModules();
-		return [...new Set(importedPackages)].filter((packageName) => (!builtInNodeModules.includes(packageName)));
+		return [...new Set(importedPackages)].filter((packageName) => !builtInNodeModules.includes(packageName));
 	}
 }

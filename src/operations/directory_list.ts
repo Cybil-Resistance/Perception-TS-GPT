@@ -45,9 +45,9 @@ export default class DirectoryList {
 
 		if (flatten) {
 			// New function to flatten keys and append list of keys that lead up to it
-			const flattenKeys = (obj, prefix = "") => {
-				let flattenedKeys: string[] = [];
-				for (let key in obj) {
+			const flattenKeys = (obj, prefix = ""): string[] => {
+				const flattenedKeys: string[] = [];
+				for (const key in obj) {
 					// If the value is an object, recursively call the function
 					if (typeof obj[key] === "object") {
 						flattenedKeys.push(prefix ? prefix + "/" + key : key);

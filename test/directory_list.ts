@@ -94,6 +94,6 @@ describe("Operations: List Directories", function () {
 
 	after(function () {
 		// Remove all test folders and files
-		fs.rmSync(path.join(process.cwd() + "/tmp/test"), { recursive: true })
+		fs.rmSync(path.join(process.cwd() + "/tmp/test"), { recursive: true });
 	});
 });
