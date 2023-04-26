@@ -1,20 +1,28 @@
 import { expect } from "chai";
 import fs from "fs";
-
+import path from "path";
 import Git from "@src/operations/Git";
 
 describe.skip("Operations: Git Operations", function () {
-	let skipTests: boolean = false;
-	const testBranchName = "mocha-automated-testing-dummy-" + (Math.random() * 100000000).toString();
+	const repoUrl = "https://github.com/Cybil-Resistance/Perception-TS-GPT.git";
+	const repoPath = path.resolve(process.cwd() + "/tmp/repo");
+	const testBranchName = "mocha-automated-testing-dummy";
 
-	/**
-	 * Okay it passed initial tests, but it's pretty chaotic.
-	 * The best thing to do here would be to create a temporary git repo for use, or a dedicated testing repo.
-	 */
+	it("should return the correct name", function () {
+		expect(Git.getName()).to.equal("Git Operations");
+	});
 
-	before(async function () {
-		const repoPath = process.cwd();
-		Git.setRepo(repoPath);
+	it("should return the correct description", function () {
+		expect(Git.getDescription()).to.equal("A class that performs Git operations using the Simple Git npm dependency.");
+	});
+
+	it("should clone the repository", async function () {
+		await Git.clone(repoUrl, repoPath);
+	});
+
+	it("should set the repo path correctly", async function () {
+		await Git.setRepo(repoPath);
+		expect(Git.branchName).to.not.be.empty;
 
 		// If there's an active diff, do not run this test
 		const diff = await Git.diff();
@@ -31,30 +39,12 @@ describe.skip("Operations: Git Operations", function () {
 		}
 	});
 
-	it("should return the correct name", function () {
-		expect(Git.getName()).to.equal("Git Operations");
-	});
-
-	it("should return the correct description", function () {
-		expect(Git.getDescription()).to.equal("A class that performs Git operations using the Simple Git npm dependency.");
-	});
-
-	it("should set the repo path correctly", function () {
-		const repoPath = process.cwd();
-		Git.setRepo(repoPath);
-		expect(Git.branchName).to.not.be.empty;
-	});
-
 	it("should get the current branches", async function () {
 		const branch = await Git.branches();
 		expect(branch).to.not.be.undefined;
 	});
 
 	it("should checkout the test branch", async function () {
-		if (skipTests) {
-			this.skip();
-		}
-
 		await Git.checkout(testBranchName);
 		const branch = await Git.branches();
 		expect(branch).to.not.be.undefined;
@@ -62,15 +52,31 @@ describe.skip("Operations: Git Operations", function () {
 	});
 
 	it("should add files to source control", async function () {
-		if (skipTests) {
-			this.skip();
-		}
-
-		const files = ["./tmp/test1.txt", "./tmp/test2.txt"];
+		const files = [`${repoPath}/tmp/test1.txt`, `${repoPath}/tmp/test2.txt`];
 		const dummyText = "Lorem ipsum dolor sit amet\n";
 
-		if (!fs.existsSync("tmp")) {
-			fs.mkdirSync("tmp");
+		if (!fs.existsSync(`${repoPath}/tmp/`)) {
+			fs.mkdirSync(`${repoPath}/tmp/`);
+		}
+
+		fs.appendFileSync(files[0], dummyText);
+		fs.appendFileSync(files[1], dummyText);
+
+		await Git.add(files);
+	});
+
+	it("should remove files from source control", async function () {
+		const files = [`${repoPath}/tmp/test1.txt`, `${repoPath}/tmp/test2.txt`];
+
+		await Git.rm(files);
+	});
+
+	it("should add the same files back to source control", async function () {
+		const files = [`${repoPath}/tmp/test1.txt`, `${repoPath}/tmp/test2.txt`];
+		const dummyText = "Lorem ipsum dolor sit amet\n";
+
+		if (!fs.existsSync(`${repoPath}/tmp/`)) {
+			fs.mkdirSync(`${repoPath}/tmp/`);
 		}
 
 		fs.appendFileSync(files[0], dummyText);
@@ -80,56 +86,35 @@ describe.skip("Operations: Git Operations", function () {
 	});
 
 	it("should check the diff of the current changes against the current active remote branch", async function () {
-		if (skipTests) {
-			this.skip();
-		}
-
 		const diff = await Git.diff(["HEAD"]);
 		expect(diff).to.not.be.empty;
 	});
 
 	it("should check the current status of the active source code", async function () {
-		if (skipTests) {
-			this.skip();
-		}
-
 		const status = await Git.status();
 		expect(status).to.not.be.empty;
 	});
 
 	it("should commit the changes", async function () {
-		if (skipTests) {
-			this.skip();
-		}
-
 		const message = "Automated Mocha test commit";
 		await Git.commit(message);
 	});
 
 	it("should push the changes", async function () {
-		if (skipTests) {
-			this.skip();
-		}
-
 		await Git.push();
-		const status = await Git.status();
-		expect(status.ahead).to.equal(0);
 	});
 
-	it.skip("should reset the changes", async function () {
-		if (skipTests) {
-			this.skip();
-		}
-
+	it("should reset the changes", async function () {
 		await Git.reset({ "--hard": null, "origin/main": null });
 		const status = await Git.status();
 		expect(status.ahead).to.equal(0);
 	});
 
 	after(async function () {
-		if (!skipTests) {
-			await Git.checkout("main");
-			await Git.deleteLocalBranch(testBranchName, true);
-		}
+		await Git.checkout("main");
+		await Git.deleteLocalBranch(testBranchName, true);
+
+		// Remove the test repository
+		fs.rmSync(repoPath, { recursive: true })
 	});
 });
