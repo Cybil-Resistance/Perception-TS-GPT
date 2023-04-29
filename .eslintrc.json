@@ -10,6 +10,7 @@
 		"sourceType": "module",
 		"ecmaVersion": 2020
 	},
+	"ignorePatterns": ["node_modules/", "build/", "tmp/", "home/"],
 	"plugins": ["@typescript-eslint"],
 	"extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier"],
 	"rules": {
