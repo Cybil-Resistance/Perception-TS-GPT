@@ -110,7 +110,7 @@ describe.skip("Operations: Git Operations", function () {
 
 	it("should reset the changes", async function () {
 		await Git.reset({ "--hard": null, "origin/main": null });
-		const status = await Git.status();
+		//const status = await Git.status();
 		//expect(status.ahead).to.equal(0); // The success criteria are not sufficient to test this properly
 	});
 
