@@ -1,7 +1,9 @@
 import fs from "fs";
 import { PromptCLI } from "@src/classes/prompt";
+import { OpenAI } from "@src/classes/llm";
 import DirectoryList from "@src/operations/directory_list";
 import Git from "@src/operations/git";
+import { RequestMessage } from "@src/classes/request";
 
 export default class PerceptionBotAdapter {
 	public static homeDirectory: string = process.cwd() + "/home/codebot/";
@@ -20,6 +22,7 @@ export default class PerceptionBotAdapter {
 			const prompt: string = await PromptCLI.select("What would you like to do?", [
 				{ title: "Work in a code repository", value: "view-home" },
 				{ title: "Set new home directory", value: "set-home" },
+				{ title: "Test streaming output", value: "test" },
 				{ title: "Go back", value: "back" },
 			]);
 
@@ -30,10 +33,28 @@ export default class PerceptionBotAdapter {
 				case "set-home":
 					await this.setHomeDirectory();
 					break;
+				case "test":
+					await this.test();
+					break;
 				default:
 					return;
 			}
 		}
+	}
+
+	private static async test(): Promise<void> {
+		const openAI = new OpenAI();
+		const requestMessage = new RequestMessage();
+		requestMessage.addHistoryContext();
+		requestMessage.addUserPrompt("What is the fastest bird in North America? And what about the slowest?");
+
+		// Submit the request to OpenAI, and cycle back to handle the response
+		const messages = requestMessage.generateMessages();
+
+		// Get the response and handle it
+		openAI.getCompletionStreaming((result: string) => {
+			console.log("streaming:", result);
+		}, messages);
 	}
 
 	private static async viewHomeDirectory(): Promise<void> {
