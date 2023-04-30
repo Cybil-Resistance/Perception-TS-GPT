@@ -50,7 +50,7 @@ export class OpenAI {
 	}
 
 	public async getCompletionStreaming(
-		callback: (response: string) => void,
+		callback: (response: ChatCompletionResponseMessage) => void,
 		messages: ChatCompletionRequestMessage[],
 		model: string = cfg.FAST_LLM_MODEL,
 		temperature: number = 0,
@@ -94,9 +94,14 @@ export class OpenAI {
 			// End the line
 			process.stdout.write("\n");
 
+			// Construct the ChatCompletionResponseMessage
+			const response: ChatCompletionResponseMessage = {
+				content: contentChunks.join(""),
+				role: ChatCompletionRequestMessageRoleEnum.Assistant,
+			};
+
 			// Return the content
-			const content = contentChunks.join("");
-			callback(content);
+			callback(response);
 		});
 		stream.on("error", (e: Error) => console.error(e));
 	}
