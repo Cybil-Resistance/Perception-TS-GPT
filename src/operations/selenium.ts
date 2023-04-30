@@ -1,15 +1,31 @@
+import BaseOperation, { OperationFormat } from "./base_operation";
 import { Builder, By, WebDriver, WebElement, until } from "selenium-webdriver";
 import { Options as ChromeOptions } from "selenium-webdriver/chrome";
 import { JSDOM } from "jsdom";
 import { config as cfg } from "@src/config";
 
-export default class Selenium {
+export default class Selenium extends BaseOperation {
 	public static getName(): string {
 		return "Selenium Web Browser";
 	}
 
 	public static getDescription(): string {
-		return "Browse a web page with Selenium and return the text content.";
+		return "Browse a web page with Selenium.";
+	}
+
+	public static getOperations(): OperationFormat[] {
+		return [
+			{
+				method: "browse_internet",
+				call: this.run,
+				args: [
+					{
+						key: "url",
+						type: "string",
+					},
+				],
+			},
+		];
 	}
 
 	public static async run(url: string): Promise<string> {

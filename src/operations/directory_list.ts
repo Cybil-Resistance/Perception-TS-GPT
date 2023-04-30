@@ -1,3 +1,4 @@
+import BaseOperation, { OperationFormat } from "./base_operation";
 import fs from "fs";
 import path from "path";
 
@@ -5,13 +6,28 @@ import path from "path";
  * Operation Prompt: It should accept a path as an argument, and an optional deep recursive boolean, and it should get all of the files and folders that are in that path, and if the deep recursive boolean is true, then recursively navigate down the tree. The output should be a JSON structure that mimics the folder-file structure, where children are nested inside of their parent folder.
  **/
 
-export default class DirectoryList {
+export default class DirectoryList extends BaseOperation {
 	public static getName(): string {
 		return "List Directories";
 	}
 
 	public static getDescription(): string {
-		return "Get all files and folders in a path and return a JSON structure that mimics the folder-file structure.";
+		return "Get all files and folders in a path.";
+	}
+
+	public static getOperations(): OperationFormat[] {
+		return [
+			{
+				method: "list_directory_files",
+				call: this.run,
+				args: [
+					{
+						key: "file_path",
+						type: "string",
+					},
+				],
+			},
+		];
 	}
 
 	public static async run(_path: string, deepRecursive: boolean = false, flatten: boolean = false): Promise<object> {

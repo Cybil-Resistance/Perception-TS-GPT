@@ -1,15 +1,35 @@
+import BaseOperation, { OperationFormat } from "./base_operation";
 import fs from "fs";
 import path from "path";
 
-export default class FileWrite {
-	private static workingDirectory: string;
+export default class FileWrite extends BaseOperation {
+	private static workingDirectory: string = process.cwd() + "/tmp/";
 
 	public static getName(): string {
 		return "Write to file";
 	}
 
 	public static getDescription(): string {
-		return "Writes contents to a file at a given location";
+		return "Writes contents to a file.";
+	}
+
+	public static getOperations(): OperationFormat[] {
+		return [
+			{
+				method: "write_file",
+				call: this.run,
+				args: [
+					{
+						key: "file_path",
+						type: "string",
+					},
+					{
+						key: "contents",
+						type: "string",
+					},
+				],
+			},
+		];
 	}
 
 	public static setWorkingDirectory(workingDirectory: string): void {

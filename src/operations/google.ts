@@ -1,15 +1,31 @@
+import BaseOperation, { OperationFormat } from "./base_operation";
 import { google } from "googleapis";
 import { config as cfg } from "@src/config";
 
 export type GoogleSearchResult = string | string[];
 
-export default class Google {
+export default class Google extends BaseOperation {
 	public static getName(): string {
 		return "Google Search";
 	}
 
 	public static getDescription(): string {
-		return "Searches Google for the given query and returns the top results.";
+		return "Search Google for information.";
+	}
+
+	public static getOperations(): OperationFormat[] {
+		return [
+			{
+				method: "search_google",
+				call: this.run,
+				args: [
+					{
+						key: "query",
+						type: "string",
+					},
+				],
+			},
+		];
 	}
 
 	public static async run(query: string, numResults: number = 8): Promise<GoogleSearchResult> {

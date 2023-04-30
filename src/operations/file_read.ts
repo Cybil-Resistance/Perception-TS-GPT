@@ -1,8 +1,9 @@
+import BaseOperation, { OperationFormat } from "./base_operation";
 import fs from "fs";
 import path from "path";
 
-export default class FileRead {
-	private static workingDirectory: string;
+export default class FileRead extends BaseOperation {
+	private static workingDirectory: string = process.cwd() + "/tmp/";
 
 	public static getName(): string {
 		return "File Read";
@@ -10,6 +11,21 @@ export default class FileRead {
 
 	public static getDescription(): string {
 		return "Reads a file and returns the contents.";
+	}
+
+	public static getOperations(): OperationFormat[] {
+		return [
+			{
+				method: "read_file",
+				call: this.run,
+				args: [
+					{
+						key: "file_path",
+						type: "string",
+					},
+				],
+			},
+		];
 	}
 
 	public static setWorkingDirectory(directory: string): void {

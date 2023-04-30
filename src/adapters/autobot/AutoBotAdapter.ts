@@ -1,6 +1,8 @@
 import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
+import { Operations } from "@src/operations";
+import OpenAiRoutine from "@src/routines/openai";
 
 // Local imports
 import { SYSTEM_PROMPT } from "./config/prompts";
@@ -24,10 +26,30 @@ export default class AutoBotAdapter {
 			process.exit();
 		}
 
+		// Collect all of the commands from the operations folder
+		const commands = Operations.map((operation) => {
+			const operations = [];
+			for (const cmd of operation.getOperations()) {
+				operations.push(
+					`- ${operation.getName()}: "${cmd.method}", args: ${cmd.args.map((arg) => `"${arg.key}": "<${arg.type}>"`).join(", ")}`,
+				);
+			}
+
+			if (!operations.length) {
+				return "";
+			}
+
+			return operations.join("\n");
+		}).filter((command) => command.length);
+
+		console.log(`Commands enabled:\n${commands.join("\n")}`);
+
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			// Set up the system prompts
-			requestMessage.addSystemPrompt(SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", prompt));
+			requestMessage.addSystemPrompt(
+				SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", prompt).replaceAll("{{COMMANDS}}", commands.join("\n")),
+			);
 			requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
 			requestMessage.addHistoryContext();
 
@@ -47,6 +69,54 @@ export default class AutoBotAdapter {
 
 			// Report the response to the user
 			console.log(`\nGPT Response:\n${response.content}\n`);
+
+			// Parse the JSON response
+			try {
+				const parsedResponse = JSON.parse(response.content.replaceAll("\n", " "));
+
+				// Figure out which command it wants to run
+				const cmdName = parsedResponse.command.name;
+				const cmdArgs = parsedResponse.command.args;
+
+				// Attempt to run the command
+				for (const operation of Operations) {
+					for (const cmd of operation.getOperations()) {
+						if (cmd.method === cmdName) {
+							// Compile the arguments
+							const args = [];
+							for (const arg of cmd.args) {
+								const value = cmdArgs[arg.key];
+								if (value === undefined) {
+									if (arg.optional) {
+										args.push(undefined);
+									} else {
+										throw new Error(`Missing required argument "${arg.key}"`);
+									}
+								} else {
+									args.push(value);
+								}
+							}
+
+							// Run the command
+							const output = await cmd.call(...args);
+
+							// Report the output to the user
+							//console.log(`\nOutput:\n${output}\n`);
+
+							// If the content is too long, iterate through summarization
+							if (output.length > 1000) {
+								const summary = await OpenAiRoutine.getSummarization("autobot", output, "question");
+								requestMessage.addSystemPrompt(`The result of your command was: "${summary}".`);
+							}
+
+							// TODO: Handle the output with OpenAI
+							requestMessage.addSystemPrompt(`The result of your command was: "${output}".`);
+						}
+					}
+				}
+			} catch (error) {
+				console.error(error);
+			}
 		}
 	}
 }

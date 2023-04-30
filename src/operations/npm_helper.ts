@@ -1,12 +1,13 @@
+import BaseOperation from "./base_operation";
 import fs from "fs";
 
-export default class NpmHelper {
+export default class NpmHelper extends BaseOperation {
 	public static getName(): string {
-		return "Get Imported Packages";
+		return "Get Imported NPM Packages";
 	}
 
 	public static getDescription(): string {
-		return "Receive an array of filepaths, open all of those files and find all import and require statements. Pull the packages out of the import and require statements, and create a list of all imported packages.";
+		return "List of all imported NPM packages.";
 	}
 
 	public static getBuiltInNodeModules(): string[] {

@@ -1,10 +1,11 @@
+import BaseOperation, { OperationFormat } from "./base_operation";
 import simpleGit, { SimpleGit, ResetOptions, StatusResult, BranchSummary, TaskOptions } from "simple-git";
 
 /**
  * Operation Prompt: Using the Simple Git npm dependency, include static public functions that allow for setting the local repository to work from, a function to add files to source control, a function to check the diff of the current changes against the current active remote branch, a function to check the current status of the active source code, and a function to commit the changes.
  **/
 
-export default class Git {
+export default class Git extends BaseOperation {
 	private static git: SimpleGit;
 	public static branchName: string;
 
@@ -13,7 +14,22 @@ export default class Git {
 	}
 
 	public static getDescription(): string {
-		return "A class that performs Git operations using the Simple Git npm dependency.";
+		return "Use git to manage source code.";
+	}
+
+	public static getOperations(): OperationFormat[] {
+		return [
+			{
+				method: "clone_repository",
+				call: this.clone,
+				args: [
+					{
+						key: "repo_url",
+						type: "string",
+					},
+				],
+			},
+		];
 	}
 
 	public static async clone(repoUrl: string, repoPath: string): Promise<void> {
