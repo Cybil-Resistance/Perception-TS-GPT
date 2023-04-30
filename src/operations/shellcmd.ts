@@ -1,4 +1,4 @@
-import BaseOperation from "./base_operation";
+import BaseOperation, { OperationFormat } from "./base_operation";
 import util from "util";
 import child_process from "child_process";
 
@@ -15,7 +15,6 @@ export default class ShellCommand extends BaseOperation {
 		return "Execute an arbitrary shell command.";
 	}
 
-	/*
 	public static getOperations(): OperationFormat[] {
 		return [
 			{
@@ -30,7 +29,6 @@ export default class ShellCommand extends BaseOperation {
 			},
 		];
 	}
-	*/
 
 	public static async run(command: string): Promise<{ stdout: string; stderr: string }> {
 		const exec = util.promisify(child_process.exec);

@@ -38,6 +38,11 @@ export default class FileRead extends BaseOperation {
 	}
 
 	public static run(filePath: string): string {
+		// If the filepath does not have a directory component, then prepend the working directory
+		if (!filePath.includes("/")) {
+			filePath = this.workingDirectory + filePath;
+		}
+
 		const resolvedPath = path.resolve(this.workingDirectory, filePath);
 		if (!resolvedPath.startsWith(this.workingDirectory)) {
 			throw new Error("File path is outside of the working directory or its children.");

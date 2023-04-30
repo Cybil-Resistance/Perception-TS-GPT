@@ -57,8 +57,8 @@ export default class OpenAIRoutine {
 			this.requestMessageTable[key] = new RequestMessage();
 		}
 
-		const chunks = this.splitText(text, 2000);
-		let summary = "";
+		const chunks = this.splitSentencesUsingNLP(text, 8192);
+		const summaries = [];
 
 		for (const chunk of chunks) {
 			const prompt = this.prepareSummaryPrompt(chunk, question);
@@ -72,17 +72,29 @@ export default class OpenAIRoutine {
 
 			this.requestMessageTable[key].addGPTResponse(response);
 
-			summary += response + " ";
+			summaries.push(response.content);
 		}
 
-		return summary;
+		// Ask once more for a summary of the summaries
+		const prompt = this.prepareSummaryPrompt(summaries.join("\n"), question);
+
+		this.requestMessageTable[key].addUserPrompt(prompt);
+
+		// Submit the request to OpenAI, and cycle back to handle the response
+		const messages = this.requestMessageTable[key].generateMessages();
+
+		const response = await openAI.getCompletion(messages);
+
+		this.requestMessageTable[key].addGPTResponse(response);
+
+		return response.content;
 	}
 
 	private static prepareSummaryPrompt(text: string, question: string): string {
 		return `"""${text}""" Using the above text, answer the following question: "${question}" -- if the question cannot be answered using the text, summarize the text.`;
 	}
 
-	private static splitText(text: string, chunkSize: number): string[] {
+	private static splitSentencesUsingNLP(text: string, chunkSize: number): string[] {
 		const tokenizer = new natural.SentenceTokenizer();
 		const sentences = tokenizer.tokenize(text);
 

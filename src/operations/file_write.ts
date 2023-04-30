@@ -37,6 +37,11 @@ export default class FileWrite extends BaseOperation {
 	}
 
 	public static async run(filePath: string, fileContents: string): Promise<void> {
+		// If the filepath does not have a directory component, then prepend the working directory
+		if (!filePath.includes("/")) {
+			filePath = this.workingDirectory + filePath;
+		}
+
 		// Resolve the file path to an absolute path
 		filePath = path.resolve(filePath);
 

@@ -78,6 +78,15 @@ export default class AutoBotAdapter {
 				const cmdName = parsedResponse.command.name;
 				const cmdArgs = parsedResponse.command.args;
 
+				// Prompt the user if they'd like to continue
+				const shouldContinue = await PromptCLI.confirm(
+					`Would you like to run the command "${cmdName}" with the arguments "${JSON.stringify(cmdArgs)}"?`,
+				);
+				if (!shouldContinue) {
+					requestMessage.addSystemPrompt(`User rejected your suggested command. Re-evaluate your options and try again.`);
+					continue;
+				}
+
 				// Attempt to run the command
 				for (const operation of Operations) {
 					for (const cmd of operation.getOperations()) {
@@ -100,17 +109,16 @@ export default class AutoBotAdapter {
 							// Run the command
 							const output = await cmd.call(...args);
 
-							// Report the output to the user
-							//console.log(`\nOutput:\n${output}\n`);
-
 							// If the content is too long, iterate through summarization
-							if (output.length > 1000) {
-								const summary = await OpenAiRoutine.getSummarization("autobot", output, "question");
+							if (output.length > 2048) {
+								console.log(`Output was too long, summarizing...`);
+								const summary = await OpenAiRoutine.getSummarization("autobot", output, prompt);
+								console.log(`Summary:\n${summary}\n`);
 								requestMessage.addSystemPrompt(`The result of your command was: "${summary}".`);
+							} else {
+								console.log(`\nOutput:\n${output}\n`);
+								requestMessage.addSystemPrompt(`The result of your command was: "${output}".`);
 							}
-
-							// TODO: Handle the output with OpenAI
-							requestMessage.addSystemPrompt(`The result of your command was: "${output}".`);
 						}
 					}
 				}
