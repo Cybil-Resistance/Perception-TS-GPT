@@ -27,16 +27,19 @@ Edit `.env`, provide any of the optional environment variables.
 1. `GOOGLE_API_KEY` - Your Google API key
 1. `GOOGLE_CUSTOM_SEARCH_ENGINE_ID` - Your custom Google search engine ID
 
-## Github
-
-1. `GITHUB_USERNAME` - The username for the Github account that you want to be able to work with repos
-1. `GITHUB_API_KEY` - An API key for the above username
-
 # Usage
 
 ## Development
 
 1. `npm run start:dev`
+
+## Prettier
+
+1. `npm run prettier`
+
+## Lint
+
+1. `npm run lint`
 
 ## Build for Production
 

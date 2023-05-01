@@ -10,8 +10,6 @@ if (!process.env.OPENAI_API_KEY) {
 export default {
 	OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 	OPENAI_TEMPERATURE: (process.env.OPENAI_TEMPERATURE && parseFloat(process.env.OPENAI_TEMPERATURE)) || 0,
-	GITHUB_API_KEY: process.env.GITHUB_API_KEY || "",
-	GITHUB_USERNAME: process.env.GITHUB_USERNAME || "",
 	GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
 	CUSTOM_SEARCH_ENGINE_ID: process.env.CUSTOM_SEARCH_ENGINE_ID || "",
 	SMART_LLM_MODEL: process.env.SMART_LLM_MODEL || "gpt-4",
@@ -23,6 +21,4 @@ export default {
 	USER_AGENT:
 		process.env.USER_AGENT ||
 		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36",
-	HEADLESS_BROWSER: process.env.HEADLESS_BROWSER === "True" || true,
-	USE_WEB_BROWSER: process.env.USE_WEB_BROWSER || "chrome",
 };

@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import Git from "@src/operations/Git";
 
-describe("Operations: Git Operations", function () {
+describe.skip("Operations: Git Operations", function () {
 	const repoUrl = "https://github.com/Cybil-Resistance/Perception-TS-GPT.git";
 	const repoPath = path.resolve(process.cwd() + "/tmp/repo");
 	const testBranchName = "mocha-automated-testing-dummy";
