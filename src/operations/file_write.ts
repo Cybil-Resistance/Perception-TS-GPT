@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 
 export default class FileWrite extends BaseOperation {
-	private static workingDirectory: string = process.cwd() + "/tmp/";
+	private static workingDirectory: string;
 
 	public static getName(): string {
 		return "Write to file";
@@ -37,9 +37,14 @@ export default class FileWrite extends BaseOperation {
 	}
 
 	public static async run(filePath: string, fileContents: string): Promise<void> {
+		// If the working directory is not set, default to the tmp directory
+		if (!this.workingDirectory) {
+			this.workingDirectory = process.cwd() + "/tmp/";
+		}
+
 		// If the filepath does not have a directory component, then prepend the working directory
-		if (!filePath.includes("/")) {
-			filePath = this.workingDirectory + filePath;
+		if (!filePath.includes("/") || filePath.startsWith("./")) {
+			filePath = this.workingDirectory + "/" + filePath;
 		}
 
 		// Resolve the file path to an absolute path

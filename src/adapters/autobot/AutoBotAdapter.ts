@@ -42,7 +42,9 @@ export default class AutoBotAdapter {
 			return operations.join("\n");
 		}).filter((command) => command.length);
 
-		console.log(`Commands enabled:\n${commands.join("\n")}`);
+		// Report the state of the program to the user
+		console.log(`\nCommands enabled:\n${commands.join("\n")}`);
+		console.log(`\nObjective: ${prompt}\n`);
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
@@ -75,12 +77,12 @@ export default class AutoBotAdapter {
 				const parsedResponse = JSON.parse(response.content.replaceAll("\n", " "));
 
 				// Figure out which command it wants to run
-				const cmdName = parsedResponse.command.name;
-				const cmdArgs = parsedResponse.command.args;
+				const parsedCommandName = parsedResponse.command.name;
+				const parsedCommandArgs = parsedResponse.command.args;
 
 				// Prompt the user if they'd like to continue
 				const shouldContinue = await PromptCLI.confirm(
-					`Would you like to run the command "${cmdName}" with the arguments "${JSON.stringify(cmdArgs)}"?`,
+					`Would you like to run the command "${parsedCommandName}" with the arguments "${JSON.stringify(parsedCommandArgs)}"?`,
 				);
 				if (!shouldContinue) {
 					requestMessage.addSystemPrompt(`User rejected your suggested command. Re-evaluate your options and try again.`);
@@ -90,24 +92,40 @@ export default class AutoBotAdapter {
 				// Attempt to run the command
 				for (const operation of Operations) {
 					for (const cmd of operation.getOperations()) {
-						if (cmd.method === cmdName) {
+						if (cmd.method === parsedCommandName) {
 							// Compile the arguments
-							const args = [];
-							for (const arg of cmd.args) {
-								const value = cmdArgs[arg.key];
+							const orderedArgs = [];
+							for (const index in cmd.args) {
+								const arg = cmd.args[index];
+								const value = parsedCommandArgs[arg.key];
 								if (value === undefined) {
 									if (arg.optional) {
-										args.push(undefined);
+										orderedArgs[index] = undefined;
 									} else {
 										throw new Error(`Missing required argument "${arg.key}"`);
 									}
 								} else {
-									args.push(value);
+									orderedArgs[index] = value;
 								}
 							}
 
 							// Run the command
-							const output = await cmd.call(...args);
+							let output = await cmd.call(...orderedArgs);
+
+							// If there is no output, continue
+							if (!output) {
+								requestMessage.addSystemPrompt(`The command "${parsedCommandName}" returned successfully.`);
+								continue;
+							}
+
+							// Prep the output
+							if (Array.isArray(output)) {
+								// If the output is an array, join it by newlines
+								output = output.join("\n");
+							} else if (typeof output === "object") {
+								// If the output is an object, stringify it
+								output = JSON.stringify(output);
+							}
 
 							// If the content is too long, iterate through summarization
 							if (output.length > 2048) {
