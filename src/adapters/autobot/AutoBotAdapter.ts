@@ -3,7 +3,7 @@ import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
 import { Operations } from "@src/operations";
 import OpenAiRoutine from "@src/routines/openai";
-const dJSON = require('dirty-json');
+import dJSON from "dirty-json";
 
 // Local imports
 import { SYSTEM_PROMPT } from "./config/prompts";
