@@ -18,6 +18,7 @@ type HistoryItem = {
 export class RequestMessage {
 	private currentPrompts: RequestMessageHistoryBlock = { prompts: [] };
 	private history: RequestMessageHistory = [];
+	private includeHistory: boolean = false;
 
 	public addSystemPrompt(prompt: string): void {
 		this.currentPrompts.prompts.push({
@@ -34,6 +35,7 @@ export class RequestMessage {
 	}
 
 	public addHistoryContext(): void {
+		this.includeHistory = true;
 		this.currentPrompts.prompts.push("HISTORY_CONTEXT_HERE");
 	}
 
@@ -55,17 +57,21 @@ export class RequestMessage {
 		}
 	}
 
-	private estimateCurrentTokenUse(): number {
+	public estimateCurrentTokenUse(): number {
 		const promptsStr = this.currentPrompts.prompts.reduce(
 			(acc, item: PromptRecord) => (typeof item === "string" ? acc : acc + item.content),
 			"",
 		);
-		const historyContent = this.buildHistoryContent();
+		let historyContent = "";
+
+		if (this.includeHistory) {
+			historyContent = this.buildHistoryContent();
+		}
 
 		return this.estimateTokens(promptsStr + historyContent);
 	}
 
-	private doesPromptExceedTokens(): boolean {
+	public doesPromptExceedTokens(): boolean {
 		return this.estimateCurrentTokenUse() > cfg.FAST_TOKEN_LIMIT;
 	}
 
@@ -93,6 +99,7 @@ export class RequestMessage {
 		this.currentPrompts.gptResponse = response;
 		this.history.push(this.currentPrompts);
 		this.currentPrompts = { prompts: [] };
+		this.includeHistory = false;
 	}
 
 	public generateMessages(): ChatCompletionRequestMessage[] {
