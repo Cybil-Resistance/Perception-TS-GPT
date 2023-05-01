@@ -121,6 +121,12 @@ export default class OpenAIRoutine {
 			}
 		}
 
+		// Get the last bit of text
+		if (currentChunk.length > 0) {
+			chunks.push(currentChunk);
+			currentChunk = "";
+		}
+
 		return chunks;
 	}
 }

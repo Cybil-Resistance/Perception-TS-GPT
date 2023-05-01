@@ -11,7 +11,7 @@ export default class PerceptionBotAdapter {
 	}
 
 	public static getDescription(): string {
-		return "A bot that can write code for you";
+		return "Work in a code repository";
 	}
 
 	public static async run(): Promise<void> {

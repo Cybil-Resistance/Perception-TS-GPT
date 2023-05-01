@@ -6,7 +6,7 @@ export default class ChatGPTBotAdapter {
 	}
 
 	public static getDescription(): string {
-		return "A bot that emulates the behavior of Chat GPT with history of a conversation";
+		return "Chat with GPT";
 	}
 
 	public static async run(): Promise<void> {

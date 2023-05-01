@@ -14,7 +14,7 @@ export default class PerceptionBotAdapter {
 	}
 
 	public static getDescription(): string {
-		return "This bot, with the power to edit and amend itself";
+		return "Create and edit operations for Perception";
 	}
 
 	public static async run(): Promise<void> {

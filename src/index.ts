@@ -7,15 +7,15 @@ import { Adapters } from "@src/adapters";
 	// Compile all adapters into a list of choices
 	const AdapterChoices = Adapters.map((Adapter) => {
 		return {
-			title: Adapter.getName(),
-			description: Adapter.getDescription(),
+			title: Adapter.getDescription(),
+			description: Adapter.getName(),
 			value: Adapter,
 		};
 	});
 
 	// Get the user's prompt
 	console.clear();
-	const ChosenAdapter = await PromptCLI.select(`\nWelcome to Perception GPT.\nPlease choose from the following programs to run.`, [
+	const ChosenAdapter = await PromptCLI.select(`\nWelcome to Perception GPT.\nWhat would you like to do?`, [
 		...AdapterChoices,
 		{ title: "Exit", description: "Leave the program", value: false },
 	]);

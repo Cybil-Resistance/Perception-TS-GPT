@@ -14,7 +14,7 @@ export default class AutoBotAdapter {
 	}
 
 	public static getDescription(): string {
-		return "A bot that automatically responds to user input";
+		return "Give GPT an automated task";
 	}
 
 	public static async run(): Promise<void> {
@@ -82,6 +82,12 @@ export default class AutoBotAdapter {
 
 			// Parse the JSON response
 			try {
+				// Remove any pre or post-text around the JSON
+				const jsonStartIndex = response.content.indexOf("{");
+				const jsonEndIndex = response.content.lastIndexOf("}");
+				response.content = response.content.substring(jsonStartIndex, jsonEndIndex + 1);
+
+				// Parse and clean the JSON
 				const parsedResponse = dJSON.parse(response.content.replaceAll("\n", " "));
 
 				// Figure out which command it wants to run
@@ -107,6 +113,10 @@ export default class AutoBotAdapter {
 								title: "Yes, and auto-approve the next 3 prompts",
 								value: 3,
 							},
+							{
+								title: "Exit",
+								value: -1,
+							},
 						],
 					);
 
@@ -118,9 +128,11 @@ export default class AutoBotAdapter {
 					console.log(`Auto-approvals remaining: ${promptsToRunRemaining}`);
 				}
 
-				if (promptsToRunRemaining <= 0) {
+				if (promptsToRunRemaining == 0) {
 					requestMessage.addSystemPrompt(`User rejected your suggested command. Re-evaluate your options and try again.`);
 					continue;
+				} else if (promptsToRunRemaining < 0) {
+					process.exit();
 				}
 
 				// Decrement the prompts to run
