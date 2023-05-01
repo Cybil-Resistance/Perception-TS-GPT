@@ -8,6 +8,7 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 export default {
+	SERVER_PORT: (process.env.SERVER_PORT && parseInt(process.env.SERVER_PORT, 10)) || 5200,
 	OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 	OPENAI_TEMPERATURE: (process.env.OPENAI_TEMPERATURE && parseFloat(process.env.OPENAI_TEMPERATURE)) || 0,
 	GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",

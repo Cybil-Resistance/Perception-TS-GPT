@@ -3,12 +3,13 @@ import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
 import { Operations } from "@src/operations";
 import OpenAiRoutine from "@src/routines/openai";
+import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 import dJSON from "dirty-json";
 
 // Local imports
 import { SYSTEM_PROMPT } from "./config/prompts";
 
-export default class AutoBotAdapter {
+export default class AutoBotAdapter extends BaseBotAdapter {
 	public static getName(): string {
 		return "AutoBot";
 	}

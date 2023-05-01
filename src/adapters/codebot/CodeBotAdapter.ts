@@ -2,8 +2,9 @@ import fs from "fs";
 import { PromptCLI } from "@src/classes/prompt";
 import DirectoryList from "@src/operations/directory_list";
 import Git from "@src/operations/git";
+import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 
-export default class PerceptionBotAdapter {
+export default class PerceptionBotAdapter extends BaseBotAdapter {
 	public static homeDirectory: string = process.cwd() + "/home/codebot/";
 
 	public static getName(): string {

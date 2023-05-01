@@ -3,12 +3,13 @@ import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
 import { FileRead, FileWrite } from "@src/operations";
+import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 import { CREATE_OPERATION, EDIT_OPERATION, CREATE_TEST_OPERATION, EDIT_TEST_OPERATION } from "./config/prompts";
 import path from "path";
 import fs from "fs";
 import highlight from "cli-highlight";
 
-export default class PerceptionBotAdapter {
+export default class PerceptionBotAdapter extends BaseBotAdapter {
 	public static getName(): string {
 		return "Perception Bot";
 	}

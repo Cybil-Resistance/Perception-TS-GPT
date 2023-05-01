@@ -2,8 +2,9 @@ import OpenAIRoutine from "@src/routines/openai";
 import Selenium from "@src/operations/selenium";
 import fs from "fs";
 import { PromptCLI } from "@src/classes/prompt";
+import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 
-export default class SummaryBotAdapter {
+export default class SummaryBotAdapter extends BaseBotAdapter {
 	public static getName(): string {
 		return "Summary Bot";
 	}

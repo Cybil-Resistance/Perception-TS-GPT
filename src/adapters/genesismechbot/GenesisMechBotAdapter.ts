@@ -3,14 +3,61 @@ import axios from "axios";
 import { GENESIS_MECH_RACE_SYSTEM_PROMPT, GENESIS_MECH_RACE_USER_PROMPT } from "./config/prompts";
 import { RequestMessage } from "@src/classes/request";
 import { OpenAI } from "@src/classes/llm";
+import { AdapterRoute, BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
+import express from "express";
 
-export default class GenesisMechBotAdapter {
+export default class GenesisMechBotAdapter extends BaseBotAdapter {
 	public static getName(): string {
 		return "Genesis Mech Bot";
 	}
 
 	public static getDescription(): string {
 		return "Narrate a race among Genesis Mechs";
+	}
+
+	public static getRoutes(): AdapterRoute[] {
+		return [
+			{
+				endpoint: "/mechs/race",
+				method: "GET",
+				handler: this.apiRoute.bind(this),
+			},
+		];
+	}
+
+	public static async apiRoute(req: express.Request, res: express.Response): Promise<void> {
+		// Get the request message from the query
+		let { mechIds } = req.query;
+
+		if (!mechIds) {
+			res.status(400).send(
+				JSON.stringify({
+					error: "No mech IDs provided.",
+				}),
+			);
+			return;
+		}
+
+		try {
+			// Split the list, turn into an array
+			mechIds = mechIds.map((id) => parseInt(id.trim(), 10));
+
+			// Get the response from the bot
+			const response: string = await this.getRaceResponse(mechIds);
+
+			// Send the response
+			res.send(
+				JSON.stringify({
+					response,
+				}),
+			);
+		} catch (error) {
+			res.status(500).send(
+				JSON.stringify({
+					error: error.message,
+				}),
+			);
+		}
 	}
 
 	public static async run(): Promise<void> {
@@ -20,6 +67,18 @@ export default class GenesisMechBotAdapter {
 		// Split the list, turn into an array
 		const mechIds: number[] = prompt.split(",").map((id) => parseInt(id.trim(), 10));
 
+		// Get the response
+		await this.getRaceResponse(mechIds);
+
+		// Ask the user if they want to run another race
+		const repeat: boolean = await PromptCLI.confirm("Run another race?");
+
+		if (repeat) {
+			await this.run();
+		}
+	}
+
+	public static async getRaceResponse(mechIds: number[]): Promise<string> {
 		// For each mech ID, get the metadata from the API
 		const mechs: string[] = [];
 		for (const mechId of mechIds) {
@@ -87,11 +146,6 @@ export default class GenesisMechBotAdapter {
 		// Report the response to the user
 		console.log(`\nGPT Response:\n${response.content}\n`);
 
-		// Ask the user if they want to run another race
-		const repeat: boolean = await PromptCLI.confirm("Run another race?");
-
-		if (repeat) {
-			await this.run();
-		}
+		return response.content;
 	}
 }
