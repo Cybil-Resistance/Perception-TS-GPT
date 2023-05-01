@@ -3,6 +3,7 @@ import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
 import { Operations } from "@src/operations";
 import OpenAiRoutine from "@src/routines/openai";
+const dJSON = require('dirty-json');
 
 // Local imports
 import { SYSTEM_PROMPT } from "./config/prompts";
@@ -30,6 +31,10 @@ export default class AutoBotAdapter {
 		const commands = Operations.map((operation) => {
 			const operations = [];
 			for (const cmd of operation.getOperations()) {
+				if (cmd.disabled) {
+					continue;
+				}
+
 				operations.push(
 					`- ${operation.getName()}: "${cmd.method}", args: ${cmd.args.map((arg) => `"${arg.key}": "<${arg.type}>"`).join(", ")}`,
 				);
@@ -45,6 +50,9 @@ export default class AutoBotAdapter {
 		// Report the state of the program to the user
 		console.log(`\nCommands enabled:\n${commands.join("\n")}`);
 		console.log(`\nObjective: ${prompt}\n`);
+
+		// Allow the user to auto-approve prompts
+		let promptsToRunRemaining = 0;
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
@@ -74,20 +82,49 @@ export default class AutoBotAdapter {
 
 			// Parse the JSON response
 			try {
-				const parsedResponse = JSON.parse(response.content.replaceAll("\n", " "));
+				const parsedResponse = dJSON.parse(response.content.replaceAll("\n", " "));
 
 				// Figure out which command it wants to run
 				const parsedCommandName = parsedResponse.command.name;
 				const parsedCommandArgs = parsedResponse.command.args;
 
 				// Prompt the user if they'd like to continue
-				const shouldContinue = await PromptCLI.confirm(
-					`Would you like to run the command "${parsedCommandName}" with the arguments "${JSON.stringify(parsedCommandArgs)}"?`,
-				);
-				if (!shouldContinue) {
+				if (promptsToRunRemaining <= 0) {
+					const selection = await PromptCLI.select(
+						`Would you like to run the command "${parsedCommandName}" with the arguments "${JSON.stringify(
+							parsedCommandArgs,
+						)}"?`,
+						[
+							{
+								title: "Yes",
+								value: 1,
+							},
+							{
+								title: "No",
+								value: 0,
+							},
+							{
+								title: "Yes, and auto-approve the next 3 prompts",
+								value: 3,
+							},
+						],
+					);
+
+					promptsToRunRemaining = selection;
+				} else {
+					console.log(
+						`Auto-approving the command "${parsedCommandName}" with the arguments "${JSON.stringify(parsedCommandArgs)}".`,
+					);
+					console.log(`Auto-approvals remaining: ${promptsToRunRemaining}`);
+				}
+
+				if (promptsToRunRemaining <= 0) {
 					requestMessage.addSystemPrompt(`User rejected your suggested command. Re-evaluate your options and try again.`);
 					continue;
 				}
+
+				// Decrement the prompts to run
+				promptsToRunRemaining--;
 
 				// Attempt to run the command
 				for (const operation of Operations) {

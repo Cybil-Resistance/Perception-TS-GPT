@@ -18,6 +18,7 @@ export default class ShellCommand extends BaseOperation {
 	public static getOperations(): OperationFormat[] {
 		return [
 			{
+				disabled: true,
 				method: "execute_shell_command",
 				call: this.run,
 				args: [

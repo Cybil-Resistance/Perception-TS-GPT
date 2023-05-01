@@ -20,6 +20,7 @@ export default class Git extends BaseOperation {
 	public static getOperations(): OperationFormat[] {
 		return [
 			{
+				disabled: true,
 				method: "clone_repository",
 				call: this.clone,
 				args: [

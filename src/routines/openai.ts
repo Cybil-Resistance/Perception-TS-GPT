@@ -70,7 +70,7 @@ export default class OpenAIRoutine {
 			// Submit the request to OpenAI, and cycle back to handle the response
 			const messages = this.requestMessageTable[key].generateMessages();
 
-			console.log(`Submitting chunk ${index+1} of ${chunks.length} to OpenAI...`);
+			console.log(`Submitting chunk ${parseInt(index, 10) + 1} of ${chunks.length} to OpenAI...`);
 			const response = await openAI.getCompletion(messages);
 
 			this.requestMessageTable[key].addGPTResponse(response);
@@ -86,6 +86,7 @@ export default class OpenAIRoutine {
 		// Submit the request to OpenAI, and cycle back to handle the response
 		const messages = this.requestMessageTable[key].generateMessages();
 
+		console.log(`Summarizing all chunk summaries with OpenAI...`);
 		const response = await openAI.getCompletion(messages);
 
 		this.requestMessageTable[key].addGPTResponse(response);

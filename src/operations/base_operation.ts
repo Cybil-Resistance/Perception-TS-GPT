@@ -1,4 +1,5 @@
 export type OperationFormat = {
+	disabled?: boolean;
 	method: string;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	call: (...args: any[]) => any;
