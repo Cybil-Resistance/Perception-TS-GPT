@@ -60,7 +60,9 @@ export default class OpenAIRoutine {
 		const chunks = this.splitSentencesUsingNLP(text, 8192);
 		const summaries = [];
 
-		for (const chunk of chunks) {
+		for (const index in chunks) {
+			const chunk = chunks[index];
+
 			const prompt = this.prepareSummaryPrompt(chunk, question);
 
 			this.requestMessageTable[key].addUserPrompt(prompt);
@@ -68,6 +70,7 @@ export default class OpenAIRoutine {
 			// Submit the request to OpenAI, and cycle back to handle the response
 			const messages = this.requestMessageTable[key].generateMessages();
 
+			console.log(`Submitting chunk ${index+1} of ${chunks.length} to OpenAI...`);
 			const response = await openAI.getCompletion(messages);
 
 			this.requestMessageTable[key].addGPTResponse(response);

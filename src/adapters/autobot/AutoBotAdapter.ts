@@ -142,6 +142,8 @@ export default class AutoBotAdapter {
 				}
 			} catch (error) {
 				console.error(error);
+
+				requestMessage.addSystemPrompt(`Your response must follow the JSON format.`);
 			}
 		}
 	}

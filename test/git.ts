@@ -3,17 +3,19 @@ import fs from "fs";
 import path from "path";
 import Git from "@src/operations/Git";
 
-describe.skip("Operations: Git Operations", function () {
+describe("Operations: Git Operations", function () {
 	const repoUrl = "https://github.com/Cybil-Resistance/Perception-TS-GPT.git";
 	const repoPath = path.resolve(process.cwd() + "/tmp/repo");
 	const testBranchName = "mocha-automated-testing-dummy";
 
-	it("should return the correct name", function () {
-		expect(Git.getName()).to.equal("Git Operations");
+	before(function () {
+		if (!fs.existsSync(repoPath)) {
+			fs.mkdirSync(repoPath, { recursive: true });
+		}
 	});
 
-	it("should return the correct description", function () {
-		expect(Git.getDescription()).to.equal("A class that performs Git operations using the Simple Git npm dependency.");
+	it("should return the correct name", function () {
+		expect(Git.getName()).to.equal("Git Operations");
 	});
 
 	it("should clone the repository", async function () {
@@ -56,12 +58,8 @@ describe.skip("Operations: Git Operations", function () {
 	});
 
 	it("should add files to source control", async function () {
-		const files = [`${repoPath}/tmp/test1.txt`, `${repoPath}/tmp/test2.txt`];
+		const files = [`${repoPath}/test1.txt`, `${repoPath}/test2.txt`];
 		const dummyText = "Lorem ipsum dolor sit amet\n";
-
-		if (!fs.existsSync(`${repoPath}/tmp/`)) {
-			fs.mkdirSync(`${repoPath}/tmp/`);
-		}
 
 		fs.appendFileSync(files[0], dummyText);
 		fs.appendFileSync(files[1], dummyText);
@@ -70,18 +68,14 @@ describe.skip("Operations: Git Operations", function () {
 	});
 
 	it("should remove files from source control", async function () {
-		const files = [`${repoPath}/tmp/test1.txt`, `${repoPath}/tmp/test2.txt`];
+		const files = [`${repoPath}/test1.txt`, `${repoPath}/test2.txt`];
 
 		await Git.rm(files);
 	});
 
 	it("should add the same files back to source control", async function () {
-		const files = [`${repoPath}/tmp/test1.txt`, `${repoPath}/tmp/test2.txt`];
+		const files = [`${repoPath}/test1.txt`, `${repoPath}/test2.txt`];
 		const dummyText = "Lorem ipsum dolor sit amet\n";
-
-		if (!fs.existsSync(`${repoPath}/tmp/`)) {
-			fs.mkdirSync(`${repoPath}/tmp/`);
-		}
 
 		fs.appendFileSync(files[0], dummyText);
 		fs.appendFileSync(files[1], dummyText);

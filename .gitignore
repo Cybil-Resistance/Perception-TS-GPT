@@ -1,6 +1,3 @@
-# Explicitly stating that these are not intended to be ignored, for it breaks some tests
-# tmp
-
 # dependencies
 node_modules
 .pnp
@@ -23,6 +20,7 @@ coverage
 # misc
 .DS_Store
 *.pem
+tmp
 
 # cache
 .eslintcache
