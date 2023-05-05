@@ -4,6 +4,7 @@ import { RequestMessage } from "@src/classes/request";
 import { Operations } from "@src/operations";
 import OpenAiRoutine from "@src/routines/openai";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
+import { config as cfg } from "@src/config";
 import dJSON from "dirty-json";
 
 // Local imports
@@ -73,9 +74,13 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 			const messages = requestMessage.generateMessages();
 
 			// Get the response and handle it
-			const response = await openAI.getCompletion({ messages, onMessageCallback: (response) => {
-				process.stdout.write(response);
-			}, });
+			const response = await openAI.getCompletion({
+				messages,
+				model: cfg.FAST_LLM_MODEL,
+				onMessageCallback: (response) => {
+					process.stdout.write(response);
+				},
+			});
 
 			// Store GPT's reponse
 			requestMessage.addGPTResponse(response);

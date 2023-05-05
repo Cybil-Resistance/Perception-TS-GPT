@@ -5,6 +5,7 @@ import { RequestMessage } from "@src/classes/request";
 import { FileRead, FileWrite } from "@src/operations";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 import { CREATE_OPERATION, EDIT_OPERATION, CREATE_TEST_OPERATION, EDIT_TEST_OPERATION } from "./config/prompts";
+import { config as cfg } from "@src/config";
 import path from "path";
 import fs from "fs";
 import highlight from "cli-highlight";
@@ -239,9 +240,13 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		const messages = requestMessage.generateMessages();
 
 		// Get the response and handle it
-		const response = await openAI.getCompletion({ messages, onMessageCallback: (response) => {
-			process.stdout.write(response);
-		}, });
+		const response = await openAI.getCompletion({
+			messages,
+			model: cfg.FAST_LLM_MODEL,
+			onMessageCallback: (response) => {
+				process.stdout.write(response);
+			},
+		});
 
 		// Store GPT's reponse
 		requestMessage.addGPTResponse(response);
