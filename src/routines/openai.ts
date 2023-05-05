@@ -70,7 +70,9 @@ export default class OpenAIRoutine {
 			const messages = this.requestMessageTable[key].generateMessages();
 
 			console.log(`Submitting chunk ${parseInt(index, 10) + 1} of ${chunks.length} to OpenAI...`);
-			const response = await openAI.getCompletion({ messages });
+			const response = await openAI.getCompletion({ messages, onMessageCallback: (response) => {
+				process.stdout.write(response);
+			}, });
 
 			this.requestMessageTable[key].addGPTResponse(response);
 
@@ -86,7 +88,9 @@ export default class OpenAIRoutine {
 		const messages = this.requestMessageTable[key].generateMessages();
 
 		console.log(`Summarizing all chunk summaries with OpenAI...`);
-		const response = await openAI.getCompletion({ messages });
+		const response = await openAI.getCompletion({ messages, onMessageCallback: (response) => {
+			process.stdout.write(response);
+		}, });
 
 		this.requestMessageTable[key].addGPTResponse(response);
 

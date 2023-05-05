@@ -239,7 +239,9 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		const messages = requestMessage.generateMessages();
 
 		// Get the response and handle it
-		const response = await openAI.getCompletion({ messages });
+		const response = await openAI.getCompletion({ messages, onMessageCallback: (response) => {
+			process.stdout.write(response);
+		}, });
 
 		// Store GPT's reponse
 		requestMessage.addGPTResponse(response);
