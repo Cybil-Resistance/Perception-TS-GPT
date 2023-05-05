@@ -8,6 +8,15 @@ import {
 import { config as cfg } from "@src/config";
 import { IncomingMessage } from "http";
 
+export type OpenAICompletionArguments = {
+	messages: ChatCompletionRequestMessage[];
+	model?: string;
+	temperature?: number;
+	n?: number;
+	onMessageCallback?: (response: string) => void;
+	onCompleteCallback?: (response: ChatCompletionResponseMessage) => void;
+};
+
 export class OpenAI {
 	private openai: OpenAIApi;
 
@@ -19,31 +28,19 @@ export class OpenAI {
 		this.openai = new OpenAIApi(configuration);
 	}
 
-	public async getCompletion(
-		messages: ChatCompletionRequestMessage[],
-		model: string = cfg.FAST_LLM_MODEL,
-		temperature: number = 0,
-		n: number = 1,
-	): Promise<ChatCompletionResponseMessage> {
-		console.log("Waiting for OpenAI to respond...");
+	public async getCompletion(args: OpenAICompletionArguments): Promise<ChatCompletionResponseMessage> {
+		// Retrieve the arguments
+		const {
+			messages,
+			model = cfg.FAST_LLM_MODEL,
+			temperature = cfg.OPENAI_TEMPERATURE,
+			n = 1,
+			onMessageCallback,
+			onCompleteCallback,
+		} = args;
 
-		const completion = await this.openai.createChatCompletion({
-			model: model,
-			messages: messages,
-			temperature: temperature,
-			n: n,
-		});
+		console.log(`Using OpenAI (${model}, T=${temperature}) to respond...`);
 
-		return completion.data.choices[0].message;
-	}
-
-	public async getCompletionStreaming(
-		callback: (response: ChatCompletionResponseMessage) => void,
-		messages: ChatCompletionRequestMessage[],
-		model: string = cfg.FAST_LLM_MODEL,
-		temperature: number = 0,
-		n: number = 1,
-	): Promise<void> {
 		const response = await this.openai.createChatCompletion(
 			{
 				model: model,
@@ -68,7 +65,10 @@ export class OpenAI {
 					try {
 						const delta = JSON.parse(data.trim());
 						if (delta.choices[0].delta?.content) {
-							process.stdout.write(delta.choices[0].delta?.content);
+							if (onMessageCallback) {
+								onMessageCallback(delta.choices[0].delta?.content);
+							}
+
 							contentChunks.push(delta.choices[0].delta?.content || "");
 						}
 					} catch (error) {
@@ -78,19 +78,27 @@ export class OpenAI {
 			}
 		});
 
-		stream.on("end", () => {
-			// End the line
-			process.stdout.write("\n");
-
-			// Construct the ChatCompletionResponseMessage
-			const response: ChatCompletionResponseMessage = {
-				content: contentChunks.join(""),
-				role: ChatCompletionRequestMessageRoleEnum.Assistant,
-			};
-
-			// Return the content
-			callback(response);
-		});
 		stream.on("error", (e: Error) => console.error(e));
+
+		return new Promise((resolve) => {
+			stream.on("end", () => {
+				// End the line
+				if (onMessageCallback) {
+					onMessageCallback("\n");
+				}
+
+				// Construct the ChatCompletionResponseMessage
+				const response: ChatCompletionResponseMessage = {
+					content: contentChunks.join(""),
+					role: ChatCompletionRequestMessageRoleEnum.Assistant,
+				};
+
+				// Return the content
+				if (onCompleteCallback) {
+					onCompleteCallback(response);
+				}
+				resolve(response);
+			});
+		});
 	}
 }

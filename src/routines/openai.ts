@@ -16,14 +16,6 @@ export default class OpenAIRoutine {
 		return "Submit prompts to OpenAI's chat completion API";
 	}
 
-	public static async getChatCompletion(
-		callback: (s: ChatCompletionResponseMessage) => void,
-		messages: ChatCompletionRequestMessage[],
-	): Promise<void> {
-		const openAI = new OpenAI();
-		openAI.getCompletionStreaming(callback, messages);
-	}
-
 	public static async promptWithHistory(key: string, callback: (s: ChatCompletionResponseMessage) => void): Promise<void> {
 		// Get the user's prompt
 		const prompt = await PromptCLI.text(`Prompt (type "q" to exit):`);
@@ -43,10 +35,17 @@ export default class OpenAIRoutine {
 		// Submit the request to OpenAI, and cycle back to handle the response
 		const messages = this.requestMessageTable[key].generateMessages();
 
-		this.getChatCompletion((content: ChatCompletionRequestMessage) => {
-			this.requestMessageTable[key].addGPTResponse(content);
-			callback(content);
-		}, messages);
+		const openAI = new OpenAI();
+		openAI.getCompletion({
+			messages,
+			onMessageCallback: (content: string) => {
+				process.stdout.write(content);
+			},
+			onCompleteCallback: (content: ChatCompletionRequestMessage) => {
+				this.requestMessageTable[key].addGPTResponse(content);
+				callback(content);
+			},
+		});
 	}
 
 	public static async getSummarization(key: string, text: string, question: string): Promise<string> {
@@ -71,7 +70,7 @@ export default class OpenAIRoutine {
 			const messages = this.requestMessageTable[key].generateMessages();
 
 			console.log(`Submitting chunk ${parseInt(index, 10) + 1} of ${chunks.length} to OpenAI...`);
-			const response = await openAI.getCompletion(messages);
+			const response = await openAI.getCompletion({ messages });
 
 			this.requestMessageTable[key].addGPTResponse(response);
 
@@ -87,7 +86,7 @@ export default class OpenAIRoutine {
 		const messages = this.requestMessageTable[key].generateMessages();
 
 		console.log(`Summarizing all chunk summaries with OpenAI...`);
-		const response = await openAI.getCompletion(messages);
+		const response = await openAI.getCompletion({ messages });
 
 		this.requestMessageTable[key].addGPTResponse(response);
 
