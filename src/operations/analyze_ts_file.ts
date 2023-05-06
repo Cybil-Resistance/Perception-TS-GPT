@@ -1,6 +1,7 @@
 import BaseOperation, { OperationFormat } from "./base_operation";
 import fs from "fs";
 import * as ts from "typescript";
+import { Project } from "ts-morph";
 
 export type TSVariable = {
 	name: string;
@@ -35,7 +36,7 @@ export type TSFileStructure = {
 };
 
 export default class AnalyzeTSFile extends BaseOperation {
-	public fileStructure: TSFileStructure;
+	private project: Project;
 
 	public static getName(): string {
 		return "Analytze TypeScript File";
@@ -64,6 +65,27 @@ export default class AnalyzeTSFile extends BaseOperation {
 			const sourceFile: ts.Node = ts.createSourceFile("temp.ts", sourceCode, ts.ScriptTarget.ES2020, true);
 
 			this.processNode(fileStructure, sourceFile);
+
+			// TODO: Use ts-morph instead, since this captures all of the exports that we're missing
+			//this.project = new Project({
+			//	compilerOptions: {
+			//		target: ts.ScriptTarget.ES2020,
+			//	  },
+			//});
+			//
+			///*
+			//this.project = new Project({
+			//	tsConfigFilePath: `${process.cwd}/tsconfig.json`,
+			//	skipAddingFilesFromTsConfig: true,
+			//});
+			//*/
+			//
+			//this.project.addSourceFileAtPath(tsFilepath);
+			//
+			//for (const [name, declarations] of this.project.getSourceFileOrThrow(tsFilepath).getExportedDeclarations()) {
+			//	console.log(declarations.map(d => d.getName()));
+			//	console.log(`${name}: ${declarations.map(d => d.getText()).join(", ")}`);
+			//}
 
 			return fileStructure;
 		} catch (error) {
