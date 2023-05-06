@@ -5,6 +5,7 @@ import * as ts from "typescript";
 export type TSVariable = {
 	name: string;
 	type?: string;
+	exported?: boolean;
 };
 
 export type TSFunction = {
@@ -12,12 +13,14 @@ export type TSFunction = {
 	inputs: TSVariable[];
 	output: string;
 	visibility?: "public" | "private" | "protected";
+	exported?: boolean;
 };
 
 export type TSInterface = {
 	name: string;
 	properties: TSVariable[];
 	methods: TSFunction[];
+	exported?: boolean;
 };
 
 export type TSType = TSInterface;
@@ -85,13 +88,40 @@ export default class AnalyzeTSFile extends BaseOperation {
 		ts.forEachChild(node, this.processNode.bind(this, fileStructure));
 	}
 
+	private static isExport(node: ts.Node): boolean {
+		// TODO: This does not identify exported global variables that are declared and assigned an anonymous function
+		return (node?.modifiers && node?.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) || false;
+	}
+
 	private static getVariableStructure(
 		node: ts.VariableDeclaration | ts.ParameterDeclaration | ts.PropertyDeclaration | ts.PropertySignature,
 	): TSVariable {
+		// If the variable is assigned a function, return the function structure
+		if (ts.isFunctionLike(node?.initializer)) {
+			console.log(node?.parent?.parent?.parent?.getText());
+
+			return {
+				name: node?.name?.escapedText as string,
+				type: this.printFunction(node?.initializer, node?.type?.getText()),
+				exported: this.isExport(node),
+			};
+		}
+
 		return {
 			name: node?.name?.escapedText as string,
 			type: node?.type?.getText() as string,
+			exported: this.isExport(node),
 		};
+	}
+
+	private static printFunction(childNode: ts.MethodDeclaration | ts.FunctionDeclaration, outputType?: string): string {
+		// Get the method structure
+		const methodStructure = this.getMethodStructure(childNode);
+
+		// Return (...input) => output format
+		return `(${methodStructure.inputs.map((input) => input.name + (input.type && " : " + input.type)).join(", ")}) => ${
+			outputType || methodStructure.output || "void"
+		}`;
 	}
 
 	private static getMethodStructure(childNode: ts.MethodDeclaration | ts.FunctionDeclaration): TSFunction {
@@ -104,6 +134,7 @@ export default class AnalyzeTSFile extends BaseOperation {
 					["public", "private", "protected"].includes(current?.getText()) ? current?.getText() : mod,
 				"public", // Default visibility for typescript methods is public
 			) as "public" | "private" | "protected" | undefined,
+			exported: this.isExport(childNode),
 		};
 
 		ts.forEachChild(childNode, (childChildNode) => {
@@ -120,6 +151,7 @@ export default class AnalyzeTSFile extends BaseOperation {
 			name: node?.name?.escapedText as string,
 			properties: [],
 			methods: [],
+			exported: this.isExport(node),
 		};
 
 		ts.forEachChild(node, (childNode) => {
