@@ -1,7 +1,7 @@
 import BaseOperation, { OperationFormat } from "./base_operation";
 import fs from "fs";
 import * as ts from "typescript";
-import { Project } from "ts-morph";
+//import { Project } from "ts-morph";
 
 export type TSVariable = {
 	name: string;
@@ -36,7 +36,7 @@ export type TSFileStructure = {
 };
 
 export default class AnalyzeTSFile extends BaseOperation {
-	private project: Project;
+	//private project: Project;
 
 	public static getName(): string {
 		return "Analytze TypeScript File";
@@ -112,31 +112,31 @@ export default class AnalyzeTSFile extends BaseOperation {
 
 	private static isExport(node: ts.Node): boolean {
 		// TODO: This does not identify exported global variables that are declared and assigned an anonymous function
-		return (node?.modifiers && node?.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) || false;
+		return ("modifiers" in node && (node?.modifiers as any)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) || false;
 	}
 
 	private static getVariableStructure(
 		node: ts.VariableDeclaration | ts.ParameterDeclaration | ts.PropertyDeclaration | ts.PropertySignature,
 	): TSVariable {
 		// If the variable is assigned a function, return the function structure
-		if (ts.isFunctionLike(node?.initializer)) {
+		if ("initializer" in node && ts.isFunctionLike(node?.initializer)) {
 			console.log(node?.parent?.parent?.parent?.getText());
 
 			return {
-				name: node?.name?.escapedText as string,
+				name: "escapedText" in node?.name && node?.name?.escapedText as string,
 				type: this.printFunction(node?.initializer, node?.type?.getText()),
 				exported: this.isExport(node),
 			};
 		}
 
 		return {
-			name: node?.name?.escapedText as string,
+			name: "escapedText" in node?.name && node?.name?.escapedText as string,
 			type: node?.type?.getText() as string,
 			exported: this.isExport(node),
 		};
 	}
 
-	private static printFunction(childNode: ts.MethodDeclaration | ts.FunctionDeclaration, outputType?: string): string {
+	private static printFunction(childNode: ts.FunctionLikeDeclaration, outputType?: string): string {
 		// Get the method structure
 		const methodStructure = this.getMethodStructure(childNode);
 
@@ -146,12 +146,12 @@ export default class AnalyzeTSFile extends BaseOperation {
 		}`;
 	}
 
-	private static getMethodStructure(childNode: ts.MethodDeclaration | ts.FunctionDeclaration): TSFunction {
+	private static getMethodStructure(childNode: ts.FunctionLikeDeclaration): TSFunction {
 		const methodStructure = {
-			name: childNode?.name?.escapedText as string,
+			name: "escapedText" in childNode?.name && childNode?.name?.escapedText as string,
 			inputs: [],
 			output: childNode?.type?.getText() as string,
-			visibility: childNode?.modifiers?.reduce(
+			visibility: (childNode?.modifiers as any)?.reduce(
 				(mod: ts.ModifierLike, current: ts.ModifierLike) =>
 					["public", "private", "protected"].includes(current?.getText()) ? current?.getText() : mod,
 				"public", // Default visibility for typescript methods is public

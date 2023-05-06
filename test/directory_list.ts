@@ -25,7 +25,7 @@ describe("Operations: List Directories", function () {
 	});
 
 	it("should return a JSON structure that mimics the folder-file structure", async function () {
-		const result = await DirectoryList.run("./tmp/test");
+		const result = DirectoryList.run("./tmp/test");
 		expect(result).to.deep.equal({
 			"test.txt": {
 				type: "file",
@@ -37,14 +37,14 @@ describe("Operations: List Directories", function () {
 
 	it("should throw an error if the path is not a directory", async function () {
 		try {
-			await DirectoryList.run("./tmp/test/test.txt");
+			DirectoryList.run("./tmp/test/test.txt");
 		} catch (error) {
 			expect(error.message).to.equal("Path is not a directory.");
 		}
 	});
 
 	it("should recursively navigate down the tree if deepRecursive is true", async function () {
-		const result = await DirectoryList.run("./tmp/test", true);
+		const result = DirectoryList.run("./tmp/test", true);
 		expect(result).to.deep.equal({
 			"test.txt": {
 				type: "file",
@@ -74,12 +74,12 @@ describe("Operations: List Directories", function () {
 	});
 
 	it("should flatten the JSON structure if flatten is true and recursive is false", async function () {
-		const result = await DirectoryList.run("./tmp/test", false, true);
+		const result = DirectoryList.run("./tmp/test", false, true);
 		expect(result).to.deep.equal(["folder1", "test.txt"]);
 	});
 
 	it("should flatten the JSON structure if flatten is true and recursive is true", async function () {
-		const result = await DirectoryList.run("./tmp/test", true, true);
+		const result = DirectoryList.run("./tmp/test", true, true);
 		expect(result).to.deep.equal([
 			"folder1",
 			"folder1/folder2",

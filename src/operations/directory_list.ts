@@ -30,7 +30,7 @@ export default class DirectoryList extends BaseOperation {
 		];
 	}
 
-	public static async run(_path: string, deepRecursive: boolean = false, flatten: boolean = false): Promise<object> {
+	public static run(_path: string, deepRecursive: boolean = false, flatten: boolean = false): object {
 		const result = {};
 		const stats = fs.statSync(_path);
 
@@ -43,7 +43,7 @@ export default class DirectoryList extends BaseOperation {
 
 				if (fileStats.isDirectory()) {
 					if (deepRecursive && !this.ignoreDirectory(file)) {
-						result[file] = await this.run(filePath, deepRecursive);
+						result[file] = this.run(filePath, deepRecursive);
 					} else {
 						result[file] = {};
 					}

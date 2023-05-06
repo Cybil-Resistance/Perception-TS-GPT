@@ -119,7 +119,7 @@ describe("Operations: Analyze TypeScript File", function () {
 					{
 						name: "printFunction",
 						inputs: [
-							{ name: "childNode", type: "ts.MethodDeclaration | ts.FunctionDeclaration", exported: false },
+							{ name: "childNode", type: "ts.FunctionLikeDeclaration", exported: false },
 							{ name: "outputType", type: "string", exported: false },
 						],
 						output: "string",
@@ -128,7 +128,7 @@ describe("Operations: Analyze TypeScript File", function () {
 					},
 					{
 						name: "getMethodStructure",
-						inputs: [{ name: "childNode", type: "ts.MethodDeclaration | ts.FunctionDeclaration", exported: false }],
+						inputs: [{ name: "childNode", type: "ts.FunctionLikeDeclaration", exported: false }],
 						output: "TSFunction",
 						visibility: "private",
 						exported: false,

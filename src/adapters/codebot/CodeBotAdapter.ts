@@ -1,11 +1,13 @@
 import fs from "fs";
 import { PromptCLI } from "@src/classes/prompt";
 import DirectoryList from "@src/operations/directory_list";
+import CodeAnalysisRoutine from "@src/routines/code_analysis";
 import Git from "@src/operations/git";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 
 export default class PerceptionBotAdapter extends BaseBotAdapter {
 	public static homeDirectory: string = process.cwd() + "/home/codebot/";
+	public static repositoryDirectory: string = process.cwd() + "/home/codebot/";
 
 	public static getName(): string {
 		return "Code Bot";
@@ -16,24 +18,21 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	public static async run(): Promise<void> {
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const prompt: string = await PromptCLI.select("What would you like to do?", [
-				{ title: "Work in a code repository", value: "view-home" },
-				{ title: "Set new home directory", value: "set-home" },
-				{ title: "Go back", value: "back" },
-			]);
+		const prompt: string = await PromptCLI.select("What would you like to do?", [
+			{ title: "Work in a code repository", value: "view-home" },
+			{ title: "Set new home directory", value: "set-home" },
+			{ title: "Exit", value: "back" },
+		]);
 
-			switch (prompt) {
-				case "view-home":
-					await this.viewHomeDirectory();
-					break;
-				case "set-home":
-					await this.setHomeDirectory();
-					break;
-				default:
-					return;
-			}
+		switch (prompt) {
+			case "view-home":
+				await this.viewHomeDirectory();
+				break;
+			case "set-home":
+				await this.setHomeDirectory();
+				break;
+			default:
+				return;
 		}
 	}
 
@@ -57,6 +56,7 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		]);
 
 		if (!prompt) {
+			this.run();
 			return;
 		} else if (prompt === "+") {
 			// Prompt the user to enter a repository URL
@@ -73,15 +73,53 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			await Git.clone(repositoryUrl, this.homeDirectory + "/" + repositoryPath);
 		} else {
 			// Set the repository path
-			await Git.setRepo(this.homeDirectory + "/" + prompt);
+			this.repositoryDirectory = this.homeDirectory + "/" + prompt;
+			await Git.setRepo(this.repositoryDirectory);
 		}
 
 		// Provide the user with options for the repository
-		console.log("options go here");
+		this.viewCodeOptions();
 	}
 
 	private static async setHomeDirectory(): Promise<void> {
 		const prompt: string = await PromptCLI.text("Enter the home directory filepath for CodeBot:");
 		this.homeDirectory = prompt;
+
+		this.run();
 	}
+
+	private static async viewCodeOptions(): Promise<void> {
+		const prompt: string = await PromptCLI.select("What would you like to do?", [
+			{ title: "Get file structure", value: "view-files" },
+			{ title: "Get code analysis for file", value: "view-code-analysis" },
+			{ title: "Go back", value: "back" },
+		]);
+
+		switch (prompt) {
+			case "view-files":
+				await this.viewFiles();
+				break;
+			case "view-code-analysis":
+				await this.viewCodeAnalysis();
+				break;
+			default:
+				this.run();
+				return;
+		}
+	}
+
+	private static async viewFiles(): Promise<void> {
+		CodeAnalysisRoutine.setRootDirectory(this.repositoryDirectory);
+		console.log(JSON.stringify(CodeAnalysisRoutine.getProgramFiles(true), null, 2));
+
+		this.viewCodeOptions();
+	}
+
+	private static async viewCodeAnalysis(): Promise<void> {
+		const prompt: string = await PromptCLI.text("Enter the filepath of the file you would like to analyze:");
+		console.log(JSON.stringify(CodeAnalysisRoutine.getCodeAnalysis(prompt), null, 2));
+
+		this.viewCodeOptions();
+	}
+
 }
