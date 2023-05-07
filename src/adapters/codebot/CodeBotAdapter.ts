@@ -96,7 +96,6 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	private static async setHomeDirectory(): Promise<void> {
-
 		do {
 			const prompt: string = await PromptCLI.text("Enter the home directory filepath for CodeBot:");
 
@@ -105,7 +104,6 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			} else {
 				this.homeDirectory = prompt;
 			}
-
 		} while (!fs.existsSync(this.homeDirectory));
 
 		// Set the home directory in the config file
@@ -145,15 +143,14 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			// Prompt the user to select a directory or file
 			const prompt: string = await PromptCLI.select("Select a directory or file:", [
 				{ title: "..", value: ".." },
-				...Object.keys(filesAndFolders)
-					.map((key: string) => {
-						const fileData = filesAndFolders[key];
-						return {
-							title: key,
-							value: key,
-							description: fileData.type && fileData.type === "file" ? `Filetype: ${fileData.filetype}` : "",
-						};
-					}),
+				...Object.keys(filesAndFolders).map((key: string) => {
+					const fileData = filesAndFolders[key];
+					return {
+						title: key,
+						value: key,
+						description: fileData.type && fileData.type === "file" ? `Filetype: ${fileData.filetype}` : "",
+					};
+				}),
 				{ title: "↩ Go back", value: null },
 			]);
 
@@ -173,7 +170,6 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			}
 		} while (true);
 	}
-
 
 	private static async viewFiles(): Promise<void> {
 		CodeAnalysisRoutine.setRootDirectory(this.repositoryDirectory);

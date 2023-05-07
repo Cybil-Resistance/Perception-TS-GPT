@@ -46,7 +46,7 @@ export default class DirectoryList extends BaseOperation {
 						result[file] = this.run(filePath, deepRecursive);
 					} else {
 						result[file] = {
-							type: "directory"
+							type: "directory",
 						};
 					}
 				} else {
