@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import fs from "fs";
 import path from "path";
-import Git from "@src/operations/Git";
+import Git from "@src/operations/git";
 
 describe.skip("Operations: Git Operations", function () {
 	const repoUrl = "https://github.com/Cybil-Resistance/Perception-TS-GPT.git";
