@@ -112,7 +112,9 @@ export default class AnalyzeTSFile extends BaseOperation {
 
 	private static isExport(node: ts.Node): boolean {
 		// TODO: This does not identify exported global variables that are declared and assigned an anonymous function
-		return ("modifiers" in node && (node?.modifiers as any)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) || false;
+		return (
+			("modifiers" in node && (node?.modifiers as any)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) || false
+		);
 	}
 
 	private static getVariableStructure(
@@ -123,14 +125,14 @@ export default class AnalyzeTSFile extends BaseOperation {
 			console.log(node?.parent?.parent?.parent?.getText());
 
 			return {
-				name: "escapedText" in node?.name && node?.name?.escapedText as string,
+				name: "escapedText" in node?.name && (node?.name?.escapedText as string),
 				type: this.printFunction(node?.initializer, node?.type?.getText()),
 				exported: this.isExport(node),
 			};
 		}
 
 		return {
-			name: "escapedText" in node?.name && node?.name?.escapedText as string,
+			name: "escapedText" in node?.name && (node?.name?.escapedText as string),
 			type: node?.type?.getText() as string,
 			exported: this.isExport(node),
 		};
@@ -148,7 +150,7 @@ export default class AnalyzeTSFile extends BaseOperation {
 
 	private static getMethodStructure(childNode: ts.FunctionLikeDeclaration): TSFunction {
 		const methodStructure = {
-			name: "escapedText" in childNode?.name && childNode?.name?.escapedText as string,
+			name: "escapedText" in childNode?.name && (childNode?.name?.escapedText as string),
 			inputs: [],
 			output: childNode?.type?.getText() as string,
 			visibility: (childNode?.modifiers as any)?.reduce(

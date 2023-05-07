@@ -7,7 +7,9 @@ export class PromptCLI {
 		const { prompt } = await prompts({
 			type: "text",
 			name: "prompt",
-			message,
+			message
+		}, {
+			onCancel: this.exitOnCancel,
 		});
 
 		return prompt;
@@ -20,6 +22,8 @@ export class PromptCLI {
 			name: "prompt",
 			message,
 			choices,
+		}, {
+			onCancel: this.exitOnCancel,
 		});
 
 		return prompt;
@@ -30,8 +34,15 @@ export class PromptCLI {
 			type: "confirm",
 			name: "prompt",
 			message,
+		}, {
+			onCancel: this.exitOnCancel,
 		});
 
 		return prompt;
+	}
+
+	private static exitOnCancel(): void {
+		console.log('-- Exiting Perception --');
+		process.exit();
 	}
 }

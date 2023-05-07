@@ -6,8 +6,9 @@ import Git from "@src/operations/git";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 
 export default class PerceptionBotAdapter extends BaseBotAdapter {
-	public static homeDirectory: string = process.cwd() + "/home/codebot/";
-	public static repositoryDirectory: string = process.cwd() + "/home/codebot/";
+	private static configPath: string = process.cwd() + "/data/codebot.json";
+	public static homeDirectory: string;
+	public static repositoryDirectory: string;
 
 	public static getName(): string {
 		return "Code Bot";
@@ -18,6 +19,54 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	public static async run(): Promise<void> {
+		// Pull the home directory from the config file
+		this.homeDirectory = this.getConfig("homeDirectory");
+
+		// Determine if we can find the home directory
+		if (!this.homeDirectory) {
+			// Prompt the user to set the home directory
+			this.setHomeDirectory();
+		} else {
+			// Enter the main menu
+			this.mainMenu();
+		}
+	}
+
+	private static getConfig(key: string): string {
+		// Determine if the config file exists in the data directory
+		if (!fs.existsSync(this.configPath)) {
+			// Create if not
+			fs.writeFileSync(this.configPath, "{}");
+		}
+
+		// Read the config file
+		const config: string = fs.readFileSync(this.configPath, "utf8");
+
+		// Parse the config file and return the value for the key, or null if not
+		return JSON.parse(config)[key] || null;
+	}
+
+	private static setConfig(key: string, value: string): void {
+		// Determine if the config file exists in the data directory
+		if (!fs.existsSync(this.configPath)) {
+			// Create if not
+			fs.writeFileSync(this.configPath, "{}");
+		}
+
+		// Read the config file
+		const config: string = fs.readFileSync(this.configPath, "utf8");
+
+		// Parse the config file
+		const configJson: object = JSON.parse(config);
+
+		// Set the value for the key
+		configJson[key] = value;
+
+		// Write the config file
+		fs.writeFileSync(this.configPath, JSON.stringify(configJson, null, 2));
+	}
+
+	public static async mainMenu(): Promise<void> {
 		const prompt: string = await PromptCLI.select("What would you like to do?", [
 			{ title: "Work in a code repository", value: "view-home" },
 			{ title: "Set new home directory", value: "set-home" },
@@ -56,7 +105,7 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		]);
 
 		if (!prompt) {
-			this.run();
+			this.mainMenu();
 			return;
 		} else if (prompt === "+") {
 			// Prompt the user to enter a repository URL
@@ -70,7 +119,8 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			}
 
 			// Clone the repository
-			await Git.clone(repositoryUrl, this.homeDirectory + "/" + repositoryPath);
+			this.repositoryDirectory = this.homeDirectory + "/" + repositoryPath;
+			await Git.clone(repositoryUrl, this.repositoryDirectory);
 		} else {
 			// Set the repository path
 			this.repositoryDirectory = this.homeDirectory + "/" + prompt;
@@ -82,10 +132,22 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	private static async setHomeDirectory(): Promise<void> {
-		const prompt: string = await PromptCLI.text("Enter the home directory filepath for CodeBot:");
-		this.homeDirectory = prompt;
 
-		this.run();
+		do {
+			const prompt: string = await PromptCLI.text("Enter the home directory filepath for CodeBot:");
+
+			if (!fs.existsSync(prompt)) {
+				console.log("Chosen directory (" + prompt + ") does not exist.");
+			} else {
+				this.homeDirectory = prompt;
+			}
+
+		} while (!fs.existsSync(this.homeDirectory));
+
+		// Set the home directory in the config file
+		this.setConfig("homeDirectory", this.homeDirectory);
+
+		this.mainMenu();
 	}
 
 	private static async viewCodeOptions(): Promise<void> {
@@ -103,7 +165,7 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 				await this.viewCodeAnalysis();
 				break;
 			default:
-				this.run();
+				this.mainMenu();
 				return;
 		}
 	}
@@ -121,5 +183,4 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 
 		this.viewCodeOptions();
 	}
-
 }
