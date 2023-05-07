@@ -32,12 +32,6 @@ export default class Selenium extends BaseOperation {
 		try {
 			const options = new ChromeOptions();
 			options.addArguments(cfg.USER_AGENT);
-
-			if (process.platform === "linux") {
-				options.addArguments("--disable-dev-shm-usage");
-				options.addArguments("--remote-debugging-port=9222");
-			}
-
 			options.addArguments("--no-sandbox");
 			options.addArguments("--headless");
 			options.addArguments("--disable-gpu");
