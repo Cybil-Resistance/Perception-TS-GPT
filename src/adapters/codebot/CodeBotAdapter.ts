@@ -121,10 +121,10 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 
 		switch (prompt) {
 			case "view-files":
-				await this.viewFiles();
+				this.viewFiles();
 				break;
 			case "view-code-analysis":
-				await this.viewFileStructure(this.viewCodeAnalysis.bind(this));
+				this.viewFileStructure(this.repositoryDirectory, this.viewCodeAnalysis.bind(this));
 				break;
 			default:
 				this.mainMenu();
@@ -133,42 +133,39 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	// Emulate a file explorer using PromptCLI and the file structure
-	private static async viewFileStructure(callback: (filePath: string) => void): Promise<void> {
-		// Get the current working directory
-		let currentDirectory: string = this.repositoryDirectory;
+	private static async viewFileStructure(currentDirectory: string, callback: (filePath: string) => void): Promise<void> {
+		const filesAndFolders: object = await DirectoryList.run(currentDirectory);
 
-		do {
-			const filesAndFolders: object = await DirectoryList.run(currentDirectory);
+		// Prompt the user to select a directory or file
+		const prompt: string = await PromptCLI.select("Select a directory or file:", [
+			{ title: "..", value: ".." },
+			...Object.keys(filesAndFolders).map((key: string) => {
+				const fileData = filesAndFolders[key];
+				return {
+					title: key,
+					value: key,
+					description: fileData.type && fileData.type === "file" ? `Filetype: ${fileData.filetype}` : "",
+				};
+			}),
+			{ title: "↩ Go back", value: null },
+		]);
 
-			// Prompt the user to select a directory or file
-			const prompt: string = await PromptCLI.select("Select a directory or file:", [
-				{ title: "..", value: ".." },
-				...Object.keys(filesAndFolders).map((key: string) => {
-					const fileData = filesAndFolders[key];
-					return {
-						title: key,
-						value: key,
-						description: fileData.type && fileData.type === "file" ? `Filetype: ${fileData.filetype}` : "",
-					};
-				}),
-				{ title: "↩ Go back", value: null },
-			]);
+		if (!prompt) {
+			this.viewCodeOptions();
+			return;
+		} else if (prompt === "..") {
+			// Move to the parent directory
+			currentDirectory = currentDirectory.split("/").slice(0, -1).join("/");
+		} else if (filesAndFolders[prompt].type === "file") {
+			// Move to the next command
+			callback(currentDirectory + "/" + prompt);
+			return;
+		} else if (filesAndFolders[prompt].type === "directory") {
+			// Move to the next directory
+			currentDirectory += "/" + prompt;
+		}
 
-			if (!prompt) {
-				this.viewCodeOptions();
-				return;
-			} else if (prompt === "..") {
-				// Move to the parent directory
-				currentDirectory = currentDirectory.split("/").slice(0, -1).join("/");
-			} else if (filesAndFolders[prompt].type === "file") {
-				// Move to the next command
-				callback(currentDirectory + "/" + prompt);
-				return;
-			} else if (filesAndFolders[prompt].type === "directory") {
-				// Move to the next directory
-				currentDirectory += "/" + prompt;
-			}
-		} while (true);
+		this.viewFileStructure(currentDirectory, callback);
 	}
 
 	private static async viewFiles(): Promise<void> {
