@@ -31,7 +31,9 @@ describe("Operations: List Directories", function () {
 				type: "file",
 				filetype: "txt",
 			},
-			folder1: {},
+			folder1: {
+				type: "directory",
+			},
 		});
 	});
 

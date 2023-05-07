@@ -45,7 +45,9 @@ export default class DirectoryList extends BaseOperation {
 					if (deepRecursive && !this.ignoreDirectory(file)) {
 						result[file] = this.run(filePath, deepRecursive);
 					} else {
-						result[file] = {};
+						result[file] = {
+							type: "directory"
+						};
 					}
 				} else {
 					const extension = path.extname(file);

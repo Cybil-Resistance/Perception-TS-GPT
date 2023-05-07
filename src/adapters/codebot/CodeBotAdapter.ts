@@ -57,13 +57,11 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		// Prompt the user to select a directory or file
 		const prompt: string = await PromptCLI.select("Select a repository to connect to, or clone a new one:", [
 			...Object.keys(filesAndFolders)
-				.filter((key) => !filesAndFolders[key].type)
+				.filter((key) => filesAndFolders[key].type == "directory")
 				.map((key: string) => {
-					const fileData = filesAndFolders[key];
 					return {
 						title: key,
 						value: key,
-						description: fileData.type && fileData.type === "file" ? `Filetype: ${fileData.filetype}` : "",
 					};
 				}),
 			{ title: "+ Clone new repository", value: "+" },
@@ -128,13 +126,54 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 				await this.viewFiles();
 				break;
 			case "view-code-analysis":
-				await this.viewCodeAnalysis();
+				await this.viewFileStructure(this.viewCodeAnalysis.bind(this));
 				break;
 			default:
 				this.mainMenu();
 				return;
 		}
 	}
+
+	// Emulate a file explorer using PromptCLI and the file structure
+	private static async viewFileStructure(callback: (filePath: string) => void): Promise<void> {
+		// Get the current working directory
+		let currentDirectory: string = this.repositoryDirectory;
+
+		do {
+			const filesAndFolders: object = await DirectoryList.run(currentDirectory);
+
+			// Prompt the user to select a directory or file
+			const prompt: string = await PromptCLI.select("Select a directory or file:", [
+				{ title: "..", value: ".." },
+				...Object.keys(filesAndFolders)
+					.map((key: string) => {
+						const fileData = filesAndFolders[key];
+						return {
+							title: key,
+							value: key,
+							description: fileData.type && fileData.type === "file" ? `Filetype: ${fileData.filetype}` : "",
+						};
+					}),
+				{ title: "↩ Go back", value: null },
+			]);
+
+			if (!prompt) {
+				this.viewCodeOptions();
+				return;
+			} else if (prompt === "..") {
+				// Move to the parent directory
+				currentDirectory = currentDirectory.split("/").slice(0, -1).join("/");
+			} else if (filesAndFolders[prompt].type === "file") {
+				// Move to the next command
+				callback(currentDirectory + "/" + prompt);
+				return;
+			} else if (filesAndFolders[prompt].type === "directory") {
+				// Move to the next directory
+				currentDirectory += "/" + prompt;
+			}
+		} while (true);
+	}
+
 
 	private static async viewFiles(): Promise<void> {
 		CodeAnalysisRoutine.setRootDirectory(this.repositoryDirectory);
@@ -143,9 +182,8 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		this.viewCodeOptions();
 	}
 
-	private static async viewCodeAnalysis(): Promise<void> {
-		const prompt: string = await PromptCLI.text("Enter the filepath of the file you would like to analyze:");
-		console.log(JSON.stringify(CodeAnalysisRoutine.getCodeAnalysis(prompt), null, 2));
+	private static async viewCodeAnalysis(filePath: string): Promise<void> {
+		console.log(JSON.stringify(CodeAnalysisRoutine.getCodeAnalysis(filePath), null, 2));
 
 		this.viewCodeOptions();
 	}
