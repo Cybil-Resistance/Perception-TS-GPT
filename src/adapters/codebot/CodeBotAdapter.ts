@@ -125,10 +125,10 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 
 	private static async viewCodeOptions(): Promise<void> {
 		const prompt: string = await PromptCLI.select("What would you like to do?", [
-			{ title: "Get file structure", value: "view-files" },
-			{ title: "Get code analysis for file", value: "view-code-analysis" },
 			{ title: "Create new file", value: "create-file" },
 			{ title: "Edit existing file", value: "edit-file" },
+			{ title: "Debug: Get file structure", value: "view-files" },
+			{ title: "Debug: Get code analysis for file", value: "view-code-analysis" },
 			{ title: "Go back", value: "back" },
 		]);
 
