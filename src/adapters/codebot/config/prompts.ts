@@ -17,9 +17,9 @@ Do not add any text before the code. Do not add any text after the code. Only pr
 
 export const EDIT_OPERATION = `Using the following code, modify it so that it meets the following requirements: {{EDITS}}
 
-Keep all comments within the code.
-
 Do not provide any context or explanation, only provide the code.
+
+Do not add any text before the code. Do not add any text after the code. Only provide the code.
 
 """
 {{CODE}}

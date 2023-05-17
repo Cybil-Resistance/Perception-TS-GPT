@@ -152,8 +152,6 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	private static async operationLoop(content: string, referenceFiles?: string[], filepath?: string, filename?: string): Promise<void> {
-		console.log(filepath, filename);
-
 		// Check if the user wants to save the operation
 		const nextOperation: string = await PromptCLI.select("Would you like to do next?", [
 			{ title: "Save File", value: "save" },
@@ -194,7 +192,13 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	private static async createOperationLoop(referenceFiles?: string[]): Promise<void> {
 		// Prompt the user for their desired operation
 		//const nameOfClass: string = await PromptCLI.text("What would you like to name the class?");
-		const details: string = await PromptCLI.text("Detail the new file's contents:");
+		const details: string = await PromptCLI.multiline("Detail the new file's contents:");
+
+		// If nothing is provided, exit
+		if (details.trim() === "") {
+			this.viewCodeOptions();
+			return;
+		}
 
 		// Construct system messages
 		const systemPrompts: string[] = await this.constructSystemPrompts(referenceFiles);
@@ -245,10 +249,11 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		filename?: string,
 	): Promise<ChatCompletionResponseMessage | void> {
 		// Prompt the user for the edits they want to make
-		const edits: string = await PromptCLI.text("What edits would you like to make? (Enter nothing to return to previous menu)");
+		const edits: string = await PromptCLI.multiline("What edits would you like to make? (Enter nothing to return to previous menu)");
 
 		// If nothing is provided, exit
-		if (edits === "") {
+		if (edits.trim() === "") {
+			this.operationLoop(content, referenceFiles, filepath, filename);
 			return;
 		}
 
@@ -269,7 +274,7 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		this.printCode(codeBlock);
 
 		// Enter the operation loop
-		await this.operationLoop(codeBlock, referenceFiles, filepath, filename);
+		this.operationLoop(codeBlock, referenceFiles, filepath, filename);
 	}
 
 	private static async constructSystemPrompts(referenceFiles?: string[]): Promise<string[]> {
@@ -411,7 +416,7 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		// Submit the request to OpenAI, and cycle back to handle the response
 		const messages = requestMessage.generateMessages();
 
-		console.log(messages);
+		//console.log(messages);
 		console.log("Current expected token use:", requestMessage.estimateCurrentTokenUse());
 
 		// Get the response and handle it

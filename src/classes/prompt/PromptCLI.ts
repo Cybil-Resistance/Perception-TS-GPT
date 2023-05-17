@@ -1,4 +1,5 @@
 import prompts from "prompts";
+import readline from "readline";
 
 export class PromptCLI {
 	public static quitCommands = ["n", "no", "exit", "quit", "q"];
@@ -48,6 +49,26 @@ export class PromptCLI {
 		);
 
 		return prompt;
+	}
+
+	public static async multiline(message: string): Promise<string> {
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
+
+		console.log(message);
+
+		let lines: string[] = [];
+		for await (const line of rl) {
+			if (line === "") {
+				break;
+			}
+			lines.push(line);
+		}
+		rl.close();
+
+		return lines.join("\n");
 	}
 
 	private static exitOnCancel(): void {
