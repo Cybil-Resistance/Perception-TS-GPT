@@ -94,6 +94,64 @@ export default class AnalyzeTSFile extends BaseOperation {
 		}
 	}
 
+	public static compressTSFileStructure(fileStructure: TSFileStructure): object {
+		const compressedStructure = {
+			types: [],
+			classes: [],
+			functions: [],
+			//variables: [],
+			interfaces: [],
+		};
+
+		for (const type of fileStructure.types) {
+			compressedStructure.types.push({
+				name: type.name,
+				properties: type.properties.map((property) => property.name + " : " + property.type),
+			});
+		}
+
+		for (const cls of fileStructure.classes) {
+			compressedStructure.classes.push({
+				name: cls.name,
+				properties: cls.properties.map((property) => property.name + " : " + property.type),
+				methods: cls.methods.map(
+					(method) => method.visibility + " " + method.name + "(" + this.cleanTypes(method.inputs) + ") : " + method.output,
+				),
+			});
+		}
+
+		for (const func of fileStructure.functions) {
+			compressedStructure.functions.push(
+				func.name + "(" + func.inputs.map((input) => input.name + " : " + input.type) + ") : " + func.output,
+			);
+		}
+
+		/*
+		for (const variable of fileStructure.variables) {
+			compressedStructure.variables.push(variable.name + " : " + variable.type);
+		}
+		*/
+
+		for (const interface_ of fileStructure.interfaces) {
+			compressedStructure.interfaces.push({
+				name: interface_.name,
+				properties: interface_.properties.map((property) => property.name + " : " + property.type),
+				methods: interface_.methods.map((method) => method.name + "(" + this.cleanTypes(method.inputs) + ") : " + method.output),
+			});
+		}
+
+		return compressedStructure;
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private static cleanTypes(types: any): string {
+		if (typeof types === "string") {
+			return types;
+		}
+
+		return types.map((input) => input.name + " : " + this.cleanTypes(input.type)).join(", ");
+	}
+
 	private static processNode(fileStructure: TSFileStructure, node: ts.Node): void {
 		if (ts.isTypeAliasDeclaration(node)) {
 			fileStructure.types.push(this.getInterfaceStructure(node));
@@ -113,6 +171,7 @@ export default class AnalyzeTSFile extends BaseOperation {
 	private static isExport(node: ts.Node): boolean {
 		// TODO: This does not identify exported global variables that are declared and assigned an anonymous function
 		return (
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			("modifiers" in node && (node?.modifiers as any)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) || false
 		);
 	}
@@ -125,15 +184,15 @@ export default class AnalyzeTSFile extends BaseOperation {
 			console.log(node?.parent?.parent?.parent?.getText());
 
 			return {
-				name: "escapedText" in node?.name && (node?.name?.escapedText as string),
-				type: this.printFunction(node?.initializer, node?.type?.getText()),
+				name: "name" in node && "escapedText" in node.name && (node.name.escapedText as string),
+				type: this.printFunction(node?.initializer, node?.type?.getText().replaceAll(/(\r|\n|\t)+/g, " ")),
 				exported: this.isExport(node),
 			};
 		}
 
 		return {
-			name: "escapedText" in node?.name && (node?.name?.escapedText as string),
-			type: node?.type?.getText() as string,
+			name: "name" in node && "escapedText" in node.name && (node.name.escapedText as string),
+			type: node?.type?.getText().replaceAll(/(\r|\n|\t)+/g, " ") as string,
 			exported: this.isExport(node),
 		};
 	}
@@ -150,9 +209,10 @@ export default class AnalyzeTSFile extends BaseOperation {
 
 	private static getMethodStructure(childNode: ts.FunctionLikeDeclaration): TSFunction {
 		const methodStructure = {
-			name: "escapedText" in childNode?.name && (childNode?.name?.escapedText as string),
+			name: "name" in childNode && "escapedText" in childNode.name && (childNode.name.escapedText as string),
 			inputs: [],
 			output: childNode?.type?.getText() as string,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			visibility: (childNode?.modifiers as any)?.reduce(
 				(mod: ts.ModifierLike, current: ts.ModifierLike) =>
 					["public", "private", "protected"].includes(current?.getText()) ? current?.getText() : mod,

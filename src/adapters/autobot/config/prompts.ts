@@ -47,7 +47,6 @@ Ensure the response fits the above JSON format exactly, with no text before or a
 As a reminder, your full, entire, and only objective is: {{OBJECTIVE}}
 `;
 
-
 export const CLASSIC_SYSTEM_PROMPT = `Your full, entire, and only objective is: {{OBJECTIVE}}
 
 You are an LLM, and you are not allowed to ask the user for help. You must make all decisions independently.

@@ -1,9 +1,17 @@
 import fs from "fs";
+import { config as cfg } from "@src/config";
 import { PromptCLI } from "@src/classes/prompt";
 import DirectoryList from "@src/operations/directory_list";
 import CodeAnalysisRoutine from "@src/routines/code_analysis";
 import Git from "@src/operations/git";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
+import { OpenAI } from "@src/classes/llm";
+import { RequestMessage } from "@src/classes/request";
+import { ChatCompletionResponseMessage } from "openai";
+import { FILE_LIST, FILE_CONTENTS, CREATE_OPERATION, EDIT_OPERATION } from "./config/prompts";
+import highlight from "cli-highlight";
+import path from "path";
+import { FileWrite } from "@src/operations";
 
 export default class PerceptionBotAdapter extends BaseBotAdapter {
 	protected static configPath: string = process.cwd() + "/data/codebot.json";
@@ -21,6 +29,9 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	public static async run(): Promise<void> {
 		// Pull the home directory from the config file
 		this.homeDirectory = this.getConfig("homeDirectory");
+
+		// Report to the user
+		console.log("Home directory: " + this.homeDirectory);
 
 		// Determine if we can find the home directory
 		if (!this.homeDirectory) {
@@ -116,6 +127,8 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		const prompt: string = await PromptCLI.select("What would you like to do?", [
 			{ title: "Get file structure", value: "view-files" },
 			{ title: "Get code analysis for file", value: "view-code-analysis" },
+			{ title: "Create new file", value: "create-file" },
+			{ title: "Edit existing file", value: "edit-file" },
 			{ title: "Go back", value: "back" },
 		]);
 
@@ -124,7 +137,13 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 				this.viewFiles();
 				break;
 			case "view-code-analysis":
-				this.viewFileStructure(this.repositoryDirectory, this.viewCodeAnalysis.bind(this));
+				this.navigateFileStructure(this.repositoryDirectory, true, this.viewCodeAnalysis.bind(this));
+				break;
+			case "create-file":
+				this.createOperation();
+				break;
+			case "edit-file":
+				this.editOperation();
 				break;
 			default:
 				this.mainMenu();
@@ -132,23 +151,206 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		}
 	}
 
+	private static async operationLoop(content: string, referenceFiles?: string[], filepath?: string, filename?: string): Promise<void> {
+		console.log(filepath, filename);
+
+		// Check if the user wants to save the operation
+		const nextOperation: string = await PromptCLI.select("Would you like to do next?", [
+			{ title: "Save File", value: "save" },
+			{ title: "Edit File", value: "edit" },
+			{ title: "Try Again", value: "retry" },
+			{ title: "Cancel", value: "cancel" },
+		]);
+
+		if (nextOperation === "save") {
+			if (filepath) {
+				this.promptFileSave(content, filepath, filename);
+			} else {
+				this.navigateFileStructure(this.repositoryDirectory, false, this.promptFileSave.bind(this, content));
+			}
+		} else if (nextOperation === "edit") {
+			this.editOperation(content, referenceFiles, filepath, filename);
+		} else if (nextOperation === "retry") {
+			this.createOperation();
+			return;
+		}
+	}
+
+	private static async createOperation(referenceFiles?: string[]): Promise<void> {
+		// Prompt the user for their desired operation
+		const includeReferenceFile: boolean = await PromptCLI.confirm("Do you want to add a file for reference?");
+
+		// If the user wants to use a reference file, prompt them for it
+		if (includeReferenceFile) {
+			this.navigateFileStructure(this.repositoryDirectory, true, (filename) => {
+				referenceFiles = (referenceFiles || []).concat([filename]);
+				this.createOperation(referenceFiles);
+			});
+		} else {
+			this.createOperationLoop(referenceFiles);
+		}
+	}
+
+	private static async createOperationLoop(referenceFiles?: string[]): Promise<void> {
+		// Prompt the user for their desired operation
+		//const nameOfClass: string = await PromptCLI.text("What would you like to name the class?");
+		const details: string = await PromptCLI.text("Detail the new file's contents:");
+
+		// Construct system messages
+		const systemPrompts: string[] = await this.constructSystemPrompts(referenceFiles);
+
+		// Construct the request message
+		const response = await this.callOpenAi(systemPrompts, CREATE_OPERATION.replaceAll("{{DETAILS}}", details));
+
+		// Clean the code result
+		const codeBlock: string = this.cleanCodeResponse(response);
+
+		// Report the response to the user
+		this.clearConsole();
+		this.printCode(codeBlock);
+
+		// Enter the operation loop
+		await this.operationLoop(codeBlock, referenceFiles);
+	}
+
+	private static async editOperation(content?: string, referenceFiles?: string[], filepath?: string, filename?: string): Promise<void> {
+		// If there is no content, we need to fetch the first file
+		if (!content) {
+			this.navigateFileStructure(this.repositoryDirectory, true, (_filename) => {
+				const content = fs.readFileSync(_filename, "utf-8");
+				this.printCode(content);
+				this.editOperation(content, referenceFiles, path.dirname(_filename), path.basename(_filename));
+			});
+			return;
+		}
+
+		// Prompt the user for their desired operation
+		const includeReferenceFile: boolean = await PromptCLI.confirm("Do you want to add a file for reference?");
+
+		// If the user wants to use a reference file, prompt them for it
+		if (includeReferenceFile) {
+			this.navigateFileStructure(this.repositoryDirectory, true, (filename) => {
+				referenceFiles = (referenceFiles || []).concat([filename]);
+				this.editOperation(content, referenceFiles, filepath, filename);
+			});
+		} else {
+			this.editOperationLoop(content, referenceFiles, filepath, filename);
+		}
+	}
+
+	private static async editOperationLoop(
+		content: string,
+		referenceFiles?: string[],
+		filepath?: string,
+		filename?: string,
+	): Promise<ChatCompletionResponseMessage | void> {
+		// Prompt the user for the edits they want to make
+		const edits: string = await PromptCLI.text("What edits would you like to make? (Enter nothing to return to previous menu)");
+
+		// If nothing is provided, exit
+		if (edits === "") {
+			return;
+		}
+
+		// Construct system messages
+		const systemPrompts: string[] = await this.constructSystemPrompts(referenceFiles);
+
+		// Construct the request message
+		const response = await this.callOpenAi(
+			systemPrompts,
+			EDIT_OPERATION.replaceAll("{{EDITS}}", edits).replaceAll("{{CODE}}", content),
+		);
+
+		// Clean the code result
+		const codeBlock: string = this.cleanCodeResponse(response);
+
+		// Report the response to the user
+		this.clearConsole();
+		this.printCode(codeBlock);
+
+		// Enter the operation loop
+		await this.operationLoop(codeBlock, referenceFiles, filepath, filename);
+	}
+
+	private static async constructSystemPrompts(referenceFiles?: string[]): Promise<string[]> {
+		// Construct system messages
+		const systemPrompts: string[] = [FILE_LIST.replaceAll("{{FILE_LIST}}", await this.getFiles())];
+
+		if (referenceFiles) {
+			for (const referenceFile of referenceFiles) {
+				// Get the file contents for the reference file
+				systemPrompts.push(
+					FILE_CONTENTS.replaceAll("{{FILE_PATH}}", referenceFile).replaceAll(
+						"{{FILE_CONTENTS}}",
+						fs.readFileSync(referenceFile, "utf-8"),
+					),
+				);
+			}
+		}
+
+		return systemPrompts;
+	}
+
+	private static cleanCodeResponse(response: ChatCompletionResponseMessage): string {
+		// Extract the codeblock if it was wrapped in a code block
+		let codeBlock = response.content;
+
+		// Remove the initial start of a code block, including any language specification
+		codeBlock = codeBlock.replace(/```[^\n\r]*/, "");
+
+		// If the code block now starts with whitespace, remove it
+		codeBlock = codeBlock.replace(/^\s*/, "");
+
+		// Remove the end of the code block
+		const lastIndex = codeBlock.lastIndexOf("```");
+		if (lastIndex !== -1) {
+			codeBlock = codeBlock.substring(0, lastIndex);
+		}
+
+		return codeBlock;
+	}
+
 	// Emulate a file explorer using PromptCLI and the file structure
-	private static async viewFileStructure(currentDirectory: string, callback: (filePath: string) => void): Promise<void> {
+	private static async navigateFileStructure(
+		currentDirectory: string,
+		includeFiles: boolean = true,
+		callback: (filePath: string) => void,
+	): Promise<void> {
 		const filesAndFolders: object = await DirectoryList.run(currentDirectory);
 
-		// Prompt the user to select a directory or file
-		const prompt: string = await PromptCLI.select("Select a directory or file:", [
+		let promptTitle = "Select a directory:";
+		if (includeFiles) {
+			promptTitle = "Select a file:";
+		}
+
+		// Construct the options
+		const options = [
 			{ title: "..", value: ".." },
-			...Object.keys(filesAndFolders).map((key: string) => {
-				const fileData = filesAndFolders[key];
-				return {
-					title: key,
-					value: key,
-					description: fileData.type && fileData.type === "file" ? `Filetype: ${fileData.filetype}` : "",
-				};
-			}),
+			...Object.keys(filesAndFolders)
+				.map((key: string) => {
+					const fileData = filesAndFolders[key];
+
+					if (!includeFiles && fileData.type === "file") {
+						return null;
+					}
+
+					return {
+						title: key,
+						value: key,
+						description: fileData.type && fileData.type === "file" ? `Filetype: ${fileData.filetype}` : "",
+					};
+				})
+				.filter((option) => !!option),
 			{ title: "↩ Go back", value: null },
-		]);
+		];
+
+		// If we're including files, then add the option to select the current directory
+		if (!includeFiles) {
+			options.splice(options.length - 1, 0, { title: "-- Select current directory --", value: "." });
+		}
+
+		// Prompt the user to select a directory or file
+		const prompt: string = await PromptCLI.select(promptTitle, options);
 
 		if (!prompt) {
 			this.viewCodeOptions();
@@ -156,6 +358,10 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		} else if (prompt === "..") {
 			// Move to the parent directory
 			currentDirectory = currentDirectory.split("/").slice(0, -1).join("/");
+		} else if (prompt === ".") {
+			// Move to the next command
+			callback(currentDirectory);
+			return;
 		} else if (filesAndFolders[prompt].type === "file") {
 			// Move to the next command
 			callback(currentDirectory + "/" + prompt);
@@ -165,18 +371,90 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			currentDirectory += "/" + prompt;
 		}
 
-		this.viewFileStructure(currentDirectory, callback);
+		this.navigateFileStructure(currentDirectory, includeFiles, callback);
+	}
+
+	private static async getFiles(): Promise<string> {
+		CodeAnalysisRoutine.setRootDirectory(this.repositoryDirectory);
+		return CodeAnalysisRoutine.listFilePaths(CodeAnalysisRoutine.getProgramFiles(true), "").join("\n");
 	}
 
 	private static async viewFiles(): Promise<void> {
-		CodeAnalysisRoutine.setRootDirectory(this.repositoryDirectory);
-		console.log(JSON.stringify(CodeAnalysisRoutine.getProgramFiles(true), null, 2));
+		console.log(await this.getFiles());
 
 		this.viewCodeOptions();
 	}
 
+	private static async getCodeAnalysis(filePath: string): Promise<object> {
+		return CodeAnalysisRoutine.listCodeAnalysis(filePath);
+	}
+
 	private static async viewCodeAnalysis(filePath: string): Promise<void> {
-		console.log(JSON.stringify(CodeAnalysisRoutine.getCodeAnalysis(filePath), null, 2));
+		console.log(JSON.stringify(await this.getCodeAnalysis(filePath), null, 2));
+
+		this.viewCodeOptions();
+	}
+
+	private static async callOpenAi(systemPrompts: string[], userPrompt: string): Promise<ChatCompletionResponseMessage> {
+		const openAI = new OpenAI();
+		const requestMessage = new RequestMessage();
+
+		// Construct the request message
+		if (systemPrompts.length > 0) {
+			for (const systemPrompt of systemPrompts) {
+				requestMessage.addSystemPrompt(systemPrompt);
+			}
+		}
+
+		requestMessage.addUserPrompt(userPrompt);
+
+		// Submit the request to OpenAI, and cycle back to handle the response
+		const messages = requestMessage.generateMessages();
+
+		console.log(messages);
+		console.log("Current expected token use:", requestMessage.estimateCurrentTokenUse());
+
+		// Get the response and handle it
+		const response = await openAI.getCompletion({
+			messages,
+			model: cfg.FAST_LLM_MODEL,
+			onMessageCallback: (response) => {
+				process.stdout.write(response);
+			},
+		});
+
+		// Store GPT's reponse
+		requestMessage.addGPTResponse(response);
+
+		return response;
+	}
+
+	private static printCode(code: string): void {
+		console.log(highlight(code, { language: "typescript", ignoreIllegals: true }));
+	}
+
+	private static clearConsole(): void {
+		//console.clear();
+	}
+
+	private static async promptFileSave(content: string, filepath?: string, filename?: string): Promise<void> {
+		// If we don't have a filename, prompt the user for one
+		if (!filename) {
+			// Prompt the user for the filename
+			filename = await PromptCLI.text("What would you like to name the file? (include the extension)");
+		} else {
+			console.log(`Saving file: ${filename}`);
+		}
+
+		// For this filename, strip any slashes
+		filename = filename.replaceAll("/", "");
+
+		// Save the operation
+		FileWrite.setWorkingDirectory(path.resolve(filepath));
+		FileWrite.run(path.resolve(filepath, filename), content);
+
+		// Log the filename
+		console.log(`Saved file: ${filename}`);
 
 		this.viewCodeOptions();
 	}

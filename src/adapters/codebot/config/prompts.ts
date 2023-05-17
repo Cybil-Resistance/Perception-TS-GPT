@@ -1,32 +1,19 @@
-export const CREATE_OPERATION = `Using the following template, create a new class named {{CLASS_NAME}} that performs this operation: {{OPERATION}}
+export const FILE_LIST = `The program has the following files and folders:
+{{FILE_LIST}}`;
 
-Update the operation name, description, run arguments, run return type, and the contents of run. Make sure that the operation name is normal English, with spaces, and that the description is a complete sentence.
+export const FILE_STRUCTURE = `The file, {{FILE_PATH}}, has the following types, classes, functions, and interfaces:
+{{FILE_STRUCTURE}}`;
 
-Keep all comments within the code.
-
-Do not provide any context or explanation, only provide the code. Keep the getName() and getDescription() functions, and edit their contents appropriately.
-
+export const FILE_CONTENTS = `The file, {{FILE_PATH}}, has the following contents:
 """
-import { config as cfg } from "@src/config";
-
-/**
- * Operation Prompt: {{OPERATION}}
- **/
-
-export default class {{CLASS_NAME}} {
-	public static getName(): string {
-		return "NAME_OF_OPERATION";
-	}
-
-	public static getDescription(): string {
-		return "DESCRIPTION_OF_OPERATION";
-	}
-
-	public static async run(ARGUMENTS): Promise<RETURN_TYPE> {
-
-	}
-}
+{{FILE_CONTENTS}}
 """`;
+
+export const CREATE_OPERATION = `Create a new file that meets the following criteria: {{DETAILS}}
+
+Do not provide any context or explanation, only provide the code.
+
+Do not add any text before the code. Do not add any text after the code. Only provide the code.`;
 
 export const EDIT_OPERATION = `Using the following code, modify it so that it meets the following requirements: {{EDITS}}
 
@@ -37,43 +24,3 @@ Do not provide any context or explanation, only provide the code.
 """
 {{CODE}}
 """`;
-
-export const CREATE_TEST_OPERATION = `Using the following code, create a new mocha test that covers the functions within the code.
-
-Do not provide any context or explanation, only provide the code.
-
-The following is the reference code for the test:
-
-"""
-{{CODE}}
-"""
-
-Use the following template to create the test:
-
-"""
-import { expect } from "chai";
-
-import OPERATION from "@src/operations/OPERATION";
-
-describe("Operations: OPERATION_DESCRIPTION", function () {
-	TESTS GO HERE
-});
-"""
-`;
-
-export const EDIT_TEST_OPERATION = `Using the following mocha test framework code, update the test so that it covers the functions within the code.
-
-Do not provide any context or explanation, only provide the code.
-
-The following is the reference code for the test:
-
-"""
-{{CODE}}
-"""
-
-Modify the following existing test code:
-
-"""
-{{TEST_CODE}}
-"""
-`;

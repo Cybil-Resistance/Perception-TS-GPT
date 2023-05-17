@@ -275,7 +275,7 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		return true;
 	}
 
-	private static async issueOperation(_commandName: string, _commandArgs: any[], callback: () => Promise<void>): Promise<void> {
+	private static async issueOperation(_commandName: string, _commandArgs: object, callback: () => Promise<void>): Promise<void> {
 		for (const operation of Operations) {
 			for (const cmd of operation.getOperations()) {
 				if (cmd.method === _commandName) {
@@ -300,7 +300,7 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 					try {
 						output = await cmd.call(...orderedArgs);
 					} catch (error) {
-						let errMsg = `The command "${_commandName}" failed to run with the error: "${error.message}"`;
+						const errMsg = `The command "${_commandName}" failed to run with the error: "${error.message}"`;
 						console.error(errMsg);
 						this.requestMessage.addSystemPrompt(errMsg);
 						return callback();

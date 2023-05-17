@@ -11,6 +11,7 @@ server.use(cors({ origin: true, credentials: true }));
 server.set("trust proxy", 1);
 
 // Iterate through all bots, expose their routes
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AdapterRoutes = Adapters.map((Adapter) => "getRoutes" in Adapter && (Adapter as any).getRoutes()).filter(
 	(route) => !!route && route.length,
 );

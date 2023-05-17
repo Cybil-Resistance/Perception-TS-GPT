@@ -87,6 +87,20 @@ describe("Operations: Analyze TypeScript File", function () {
 						exported: false,
 					},
 					{
+						name: "compressTSFileStructure",
+						inputs: [{ name: "fileStructure", type: "TSFileStructure", exported: false }],
+						output: "object",
+						visibility: "public",
+						exported: false,
+					},
+					{
+						name: "cleanTypes",
+						inputs: [{ name: "types", type: "any", exported: false }],
+						output: "string",
+						visibility: "private",
+						exported: false,
+					},
+					{
 						name: "processNode",
 						inputs: [
 							{ name: "fileStructure", type: "TSFileStructure", exported: false },

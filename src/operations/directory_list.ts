@@ -50,6 +50,10 @@ export default class DirectoryList extends BaseOperation {
 						};
 					}
 				} else {
+					if (this.ignoreFiles(file)) {
+						continue;
+					}
+
 					const extension = path.extname(file);
 					result[file] = {
 						type: "file",
@@ -82,7 +86,21 @@ export default class DirectoryList extends BaseOperation {
 	}
 
 	private static ignoreDirectory(directory: string): boolean {
-		const ignoreDirectories = ["node_modules", ".git", ".vscode", "dist", "build"];
+		const ignoreDirectories = ["node_modules", ".git", ".vscode", "dist", "build", "tmp", "data"];
+		return ignoreDirectories.includes(directory);
+	}
+
+	private static ignoreFiles(directory: string): boolean {
+		const ignoreDirectories = [
+			".env",
+			"package-lock.json",
+			"yarn.lock",
+			".editorconfig",
+			".gitignore",
+			".prettierrc",
+			".eslintrc.json",
+			".DS_Store",
+		];
 		return ignoreDirectories.includes(directory);
 	}
 }
