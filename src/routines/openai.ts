@@ -1,3 +1,4 @@
+import { config as cfg } from "@src/config";
 import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
@@ -38,6 +39,7 @@ export default class OpenAIRoutine {
 		const openAI = new OpenAI();
 		openAI.getCompletion({
 			messages,
+			model: cfg.SMART_LLM_MODEL,
 			onMessageCallback: (content: string) => {
 				process.stdout.write(content);
 			},
@@ -72,6 +74,7 @@ export default class OpenAIRoutine {
 			console.log(`Submitting chunk ${parseInt(index, 10) + 1} of ${chunks.length} to OpenAI...`);
 			const response = await openAI.getCompletion({
 				messages,
+				model: cfg.SMART_LLM_MODEL,
 				onMessageCallback: (response) => {
 					process.stdout.write(response);
 				},
@@ -80,6 +83,11 @@ export default class OpenAIRoutine {
 			this.requestMessageTable[key].addGPTResponse(response);
 
 			summaries.push(response.content);
+		}
+
+		// If there was only one chunk, just return that
+		if (summaries.length === 1) {
+			return summaries[0];
 		}
 
 		// Ask once more for a summary of the summaries
@@ -93,6 +101,7 @@ export default class OpenAIRoutine {
 		console.log(`Summarizing all chunk summaries with OpenAI...`);
 		const response = await openAI.getCompletion({
 			messages,
+			model: cfg.SMART_LLM_MODEL,
 			onMessageCallback: (response) => {
 				process.stdout.write(response);
 			},
