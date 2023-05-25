@@ -2,10 +2,10 @@ import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
 import { RequestMessage } from "@src/classes/request";
 import { Operations } from "@src/operations";
-import OpenAiRoutine from "@src/routines/openai";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 import { config as cfg } from "@src/config";
 import dJSON from "dirty-json";
+import AutobotRoutine from "@src/routines/autobot";
 
 // Local imports
 import { PERCEPTION_SYSTEM_PROMPT, CLASSIC_SYSTEM_PROMPT } from "./config/prompts";
@@ -31,7 +31,7 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		this.requestMessage = new RequestMessage();
 
 		// Collect all of the commands from the operations folder
-		this.commands = this.getOperations();
+		this.commands = AutobotRoutine.listOperations(Operations);
 
 		// Get the user's version preference
 		const version = await PromptCLI.select(`Which version of AutoBot would you like to run?:`, [
@@ -58,27 +58,6 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		}
 	}
 
-	private static getOperations(): string[] {
-		return Operations.map((operation) => {
-			const operations = [];
-			for (const cmd of operation.getOperations()) {
-				if (cmd.disabled) {
-					continue;
-				}
-
-				operations.push(
-					`- ${operation.getName()}: "${cmd.method}", args: ${cmd.args.map((arg) => `"${arg.key}": "<${arg.type}>"`).join(", ")}`,
-				);
-			}
-
-			if (!operations.length) {
-				return "";
-			}
-
-			return operations.join("\n");
-		}).filter((command) => command.length);
-	}
-
 	private static async startPerception(): Promise<void> {
 		// Get the user's prompt
 		this.objective = await PromptCLI.text(`What objective would you like your AutoBot to perform for you?:`);
@@ -93,13 +72,17 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		this.runPerception();
 	}
 
-	private static async runPerception(): Promise<void> {
+	private static async runPerception(operationResult?: string): Promise<void> {
 		// Set up the system prompts
 		this.requestMessage.addSystemPrompt(
 			PERCEPTION_SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", this.objective).replaceAll("{{COMMANDS}}", this.commands.join("\n")),
 		);
 		this.requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
 		this.requestMessage.addHistoryContext();
+
+		if (operationResult) {
+			this.requestMessage.addSystemPrompt(operationResult);
+		}
 
 		// Construct the request message based on history
 		this.requestMessage.addUserPrompt(
@@ -147,12 +130,25 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		}
 
 		// Prompt the user if they'd like to continue
-		if (!(await this.promptOperation(parsedCommandName, parsedCommandArgs))) {
+		let _continue = true;
+		[_continue, this.promptsToRunRemaining] = await AutobotRoutine.promptOperation(
+			parsedCommandName,
+			parsedCommandArgs,
+			this.promptsToRunRemaining,
+			this.requestMessage,
+		);
+		if (!_continue) {
 			return this.runPerception();
 		}
 
 		// Attempt to run the command
-		return this.issueOperation(parsedCommandName, parsedCommandArgs, this.runPerception.bind(this));
+		return AutobotRoutine.issueOperation(
+			parsedCommandName,
+			parsedCommandArgs,
+			this.objective,
+			Operations,
+			this.runPerception.bind(this),
+		);
 	}
 
 	private static async startClassic(): Promise<void> {
@@ -169,13 +165,17 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		this.runClassic();
 	}
 
-	private static async runClassic(): Promise<void> {
+	private static async runClassic(operationResult?: string): Promise<void> {
 		// Set up the system prompts
 		this.requestMessage.addSystemPrompt(
 			CLASSIC_SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", this.objective).replaceAll("{{COMMANDS}}", this.commands.join("\n")),
 		);
 		this.requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
 		this.requestMessage.addHistoryContext();
+
+		if (operationResult) {
+			this.requestMessage.addSystemPrompt(operationResult);
+		}
 
 		// Construct the request message based on history
 		this.requestMessage.addUserPrompt(
@@ -196,9 +196,6 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 
 		// Store GPT's reponse
 		this.requestMessage.addGPTResponse(response);
-
-		// Report the response to the user
-		console.log(`\nGPT Response:\n${response.content}\n`);
 
 		// Parse the JSON response
 		let parsedCommandName, parsedCommandArgs;
@@ -223,118 +220,24 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		}
 
 		// Prompt the user if they'd like to continue
-		if (!(await this.promptOperation(parsedCommandName, parsedCommandArgs))) {
+		let _continue = true;
+		[_continue, this.promptsToRunRemaining] = await AutobotRoutine.promptOperation(
+			parsedCommandName,
+			parsedCommandArgs,
+			this.promptsToRunRemaining,
+			this.requestMessage,
+		);
+		if (!_continue) {
 			return this.runClassic();
 		}
 
 		// Attempt to run the command
-		return this.issueOperation(parsedCommandName, parsedCommandArgs, this.runClassic.bind(this));
-	}
-
-	private static async promptOperation(_commandName: string, _commandArgs: string[]): Promise<boolean> {
-		// Prompt the user if they'd like to continue
-		if (this.promptsToRunRemaining <= 0) {
-			const selection = await PromptCLI.select(
-				`Would you like to run the command "${_commandName}" with the arguments "${JSON.stringify(_commandArgs)}"?`,
-				[
-					{
-						title: "Yes",
-						value: 1,
-					},
-					{
-						title: "No",
-						value: 0,
-					},
-					{
-						title: "Yes, and auto-approve the next 3 prompts",
-						value: 3,
-					},
-					{
-						title: "Exit",
-						value: -1,
-					},
-				],
-			);
-
-			this.promptsToRunRemaining = selection;
-		} else {
-			console.log(`Auto-approving the command "${_commandName}" with the arguments "${JSON.stringify(_commandArgs)}".`);
-			console.log(`Auto-approvals remaining: ${this.promptsToRunRemaining}`);
-		}
-
-		if (this.promptsToRunRemaining == 0) {
-			this.requestMessage.addSystemPrompt(`User rejected your suggested command. Re-evaluate your options and try again.`);
-			return false;
-		} else if (this.promptsToRunRemaining < 0) {
-			process.exit();
-		}
-
-		// Decrement the prompts to run
-		this.promptsToRunRemaining--;
-
-		return true;
-	}
-
-	private static async issueOperation(_commandName: string, _commandArgs: object, callback: () => Promise<void>): Promise<void> {
-		for (const operation of Operations) {
-			for (const cmd of operation.getOperations()) {
-				if (cmd.method === _commandName) {
-					// Compile the arguments
-					const orderedArgs = [];
-					for (const index in cmd.args) {
-						const arg = cmd.args[index];
-						const value = _commandArgs[arg.key];
-						if (value === undefined) {
-							if (arg.optional) {
-								orderedArgs[index] = undefined;
-							} else {
-								throw new Error(`Missing required argument "${arg.key}"`);
-							}
-						} else {
-							orderedArgs[index] = value;
-						}
-					}
-
-					// Run the command
-					let output;
-					try {
-						output = await cmd.call(...orderedArgs);
-					} catch (error) {
-						const errMsg = `The command "${_commandName}" failed to run with the error: "${error.message}"`;
-						console.error(errMsg);
-						this.requestMessage.addSystemPrompt(errMsg);
-						return callback();
-					}
-
-					// If there is no output, continue
-					if (!output) {
-						this.requestMessage.addSystemPrompt(`The command "${_commandName}" returned successfully.`);
-						return callback();
-					}
-
-					// Prep the output
-					if (Array.isArray(output)) {
-						// If the output is an array, join it by newlines
-						output = output.join("\n");
-					} else if (typeof output === "object") {
-						// If the output is an object, stringify it
-						output = JSON.stringify(output);
-					}
-
-					// If the content is too long, iterate through summarization
-					if (output.length > 2048) {
-						console.log(`Output was too long, summarizing...`);
-						const summary = await OpenAiRoutine.getSummarization("autobot", output, this.objective);
-						console.log(`Summary:\n${summary}\n`);
-						this.requestMessage.addSystemPrompt(`The result of your command was: "${summary}".`);
-					} else {
-						console.log(`\nOutput:\n${output}\n`);
-						this.requestMessage.addSystemPrompt(`The result of your command was: "${output}".`);
-					}
-				}
-			}
-		}
-
-		callback();
+		return AutobotRoutine.issueOperation(
+			parsedCommandName,
+			parsedCommandArgs,
+			this.objective,
+			Operations,
+			this.runClassic.bind(this),
+		);
 	}
 }

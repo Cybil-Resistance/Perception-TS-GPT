@@ -15,6 +15,7 @@ export type OpenAICompletionArguments = {
 	n?: number;
 	onMessageCallback?: (response: string) => void;
 	onCompleteCallback?: (response: ChatCompletionResponseMessage) => void;
+	numCompletionAttempts?: number;
 };
 
 export class OpenAI {
@@ -37,6 +38,7 @@ export class OpenAI {
 			n = 1,
 			onMessageCallback,
 			onCompleteCallback,
+			numCompletionAttempts = 0,
 		} = args;
 
 		console.log(`Using OpenAI (${model}, T=${temperature}) to respond...`);
@@ -78,7 +80,19 @@ export class OpenAI {
 			}
 		});
 
-		stream.on("error", (e: Error) => console.error(e));
+		stream.on("error", (e: Error) => {
+			// Notify the user of an error
+			console.error(e.message);
+
+			// If we exceed the number of valid attempts, fail out
+			if (numCompletionAttempts >= 3) {
+				console.error(`Exceeded maximum number of completion attempts (3)`);
+				process.exit();
+			}
+
+			// Try to run again
+			this.getCompletion({...args, numCompletionAttempts: (args.numCompletionAttempts || 0) + 1});
+		});
 
 		return new Promise((resolve) => {
 			stream.on("end", () => {

@@ -89,7 +89,7 @@ export class RequestMessage {
 	}
 
 	private buildHistoryContent(): string {
-		const historyContext = `This reminds you of these events from your past:\n\n`;
+		const historyContext = `The following is your recent activity history:\n\n`;
 		const historyStr = this.generateConversationHistory().reduce((acc, item) => acc + this.formatHistoryItem(item), "");
 
 		return historyContext + historyStr;

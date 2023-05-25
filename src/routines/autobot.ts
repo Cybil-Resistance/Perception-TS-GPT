@@ -90,10 +90,10 @@ export default class AutobotRoutine {
 		_commandName: string,
 		_commandArgs: object,
 		_objective: string,
-		_requestMessage: RequestMessage,
 		_Operations: Array<typeof BaseOperation>,
-		callback: () => Promise<void>,
+		callback: (result? : string) => Promise<void>,
 	): Promise<void> {
+		let callbackResponse = "";
 		for (const operation of _Operations) {
 			for (const cmd of operation.getOperations()) {
 				if (cmd.method === _commandName) {
@@ -120,14 +120,12 @@ export default class AutobotRoutine {
 					} catch (error) {
 						const errMsg = `The command "${_commandName}" failed to run with the error: "${error.message}"`;
 						console.error(errMsg);
-						_requestMessage.addSystemPrompt(errMsg);
-						return callback();
+						return callback(errMsg);
 					}
 
 					// If there is no output, continue
 					if (!output) {
-						_requestMessage.addSystemPrompt(`The command "${_commandName}" returned successfully.`);
-						return callback();
+						return callback(`The command "${_commandName}" returned successfully.`);
 					}
 
 					// Prep the output
@@ -144,15 +142,15 @@ export default class AutobotRoutine {
 						console.log(`Output was too long, summarizing...`);
 						const summary = await OpenAiRoutine.getSummarization("autobot", output, _objective);
 						console.log(`Summary:\n${summary}\n`);
-						_requestMessage.addSystemPrompt(`The result of your command was: "${summary}".`);
+						callbackResponse = `You just ran the command "${_commandName}" with the arguments ${JSON.stringify(_commandArgs)}.\n\nThe result of your command was:\n"${summary}".`;
 					} else {
 						console.log(`\nOutput:\n${output}\n`);
-						_requestMessage.addSystemPrompt(`The result of your command was: "${output}".`);
+						callbackResponse = `You just ran the command "${_commandName}" with the arguments ${JSON.stringify(_commandArgs)}.\n\nThe result of your command was:\n"${output}".`;
 					}
 				}
 			}
 		}
 
-		callback();
+		callback(callbackResponse);
 	}
 }

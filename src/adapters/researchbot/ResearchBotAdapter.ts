@@ -15,7 +15,6 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 	private static requestMessage: RequestMessage;
 	private static commands: string[];
 	private static objective: string;
-	private static promptsToRunRemaining: number = 0;
 
 	public static getName(): string {
 		return "ResearchBot";
@@ -43,16 +42,20 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 		console.log(`\nCommands enabled:\n${this.commands.join("\n")}`);
 		console.log(`\nResearch topic: ${this.objective}\n`);
 
-		this.runPerception();
+		this.runResearcher();
 	}
 
-	private static async runPerception(): Promise<void> {
+	private static async runResearcher(operationResult?: string): Promise<void> {
 		// Set up the system prompts
 		this.requestMessage.addSystemPrompt(
 			SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", this.objective).replaceAll("{{COMMANDS}}", this.commands.join("\n")),
 		);
 		this.requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
 		this.requestMessage.addHistoryContext();
+
+		if (operationResult) {
+			this.requestMessage.addSystemPrompt(operationResult);
+		}
 
 		// Construct the request message based on history
 		this.requestMessage.addUserPrompt(
@@ -74,9 +77,6 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 		// Store GPT's reponse
 		this.requestMessage.addGPTResponse(response);
 
-		// Report the response to the user
-		console.log(`\nGPT Response:\n${response.content}\n`);
-
 		// Parse the JSON response
 		let parsedCommandName, parsedCommandArgs;
 		try {
@@ -96,19 +96,7 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 
 			this.requestMessage.addSystemPrompt(`Your response must follow the JSON format.`);
 
-			return this.runPerception();
-		}
-
-		// Prompt the user if they'd like to continue
-		let _continue = true;
-		[_continue, this.promptsToRunRemaining] = await AutobotRoutine.promptOperation(
-			parsedCommandName,
-			parsedCommandArgs,
-			this.promptsToRunRemaining,
-			this.requestMessage,
-		);
-		if (!_continue) {
-			return this.runPerception();
+			return this.runResearcher();
 		}
 
 		// Attempt to run the command
@@ -116,9 +104,8 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 			parsedCommandName,
 			parsedCommandArgs,
 			this.objective,
-			this.requestMessage,
 			WebOperations,
-			this.runPerception.bind(this),
+			this.runResearcher.bind(this),
 		);
 	}
 }

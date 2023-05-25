@@ -104,7 +104,7 @@ export default class OpenAIRoutine {
 	}
 
 	private static prepareSummaryPrompt(text: string, question: string): string {
-		return `"""${text}""" Using the above text, answer the following question: "${question}" -- if the question cannot be answered using the text, summarize the text.`;
+		return `"""${text}""" Using the above text, answer the following question: "${question}" -- if the question cannot be answered using the text, summarize the text and include as much relevant information as possible.`;
 	}
 
 	private static splitSentencesUsingNLP(text: string, chunkSize: number): string[] {
