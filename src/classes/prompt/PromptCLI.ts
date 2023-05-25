@@ -59,7 +59,7 @@ export class PromptCLI {
 
 		console.log(message);
 
-		let lines: string[] = [];
+		const lines: string[] = [];
 		for await (const line of rl) {
 			if (line === "") {
 				break;
