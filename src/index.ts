@@ -26,6 +26,7 @@ import State from "@src/classes/state/State";
 
 	// Construct program state
 	const state = new State();
+	ChosenAdapter.setState(state);
 
 	// Run the program
 	await ChosenAdapter.run(state);

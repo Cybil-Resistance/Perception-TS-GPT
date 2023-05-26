@@ -12,11 +12,8 @@ import { FILE_LIST, FILE_CONTENTS, CREATE_OPERATION, EDIT_OPERATION } from "./co
 import highlight from "cli-highlight";
 import path from "path";
 import { FileWrite } from "@src/operations";
-import State from "@src/classes/state/State";
 
 export default class PerceptionBotAdapter extends BaseBotAdapter {
-	public static state: State;
-
 	public static getName(): string {
 		return "Code Bot";
 	}
@@ -25,10 +22,7 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		return "Work in a code repository";
 	}
 
-	public static async run(state: State): Promise<void> {
-		// Save the state
-		this.state = state;
-
+	public static async run(): Promise<void> {
 		// Get the home directory from the state
 		const { homeDirectory } = this.state.getProgramState("codebot");
 

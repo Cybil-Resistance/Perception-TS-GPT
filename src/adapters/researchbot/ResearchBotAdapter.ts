@@ -1,6 +1,5 @@
 import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
-import State from "@src/classes/state/State";
 import { WebOperations } from "@src/operations";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 import { config as cfg } from "@src/config";
@@ -11,8 +10,6 @@ import dJSON from "dirty-json";
 import { SYSTEM_PROMPT } from "./config/prompts";
 
 export default class ResearchBotAdapter extends BaseBotAdapter {
-	private static state: State;
-
 	public static getName(): string {
 		return "ResearchBot";
 	}
@@ -21,10 +18,7 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 		return "Ask GPT to research a topic for you.";
 	}
 
-	public static async run(state?: State): Promise<void> {
-		// Initalize user's state
-		this.state = state;
-
+	public static async run(): Promise<void> {
 		// Collect all of the commands from the operations folder
 		const commands = AutobotRoutine.listOperations(WebOperations);
 

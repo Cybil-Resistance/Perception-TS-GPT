@@ -8,11 +8,8 @@ import AutobotRoutine from "@src/routines/autobot";
 
 // Local imports
 import { PERCEPTION_SYSTEM_PROMPT, CLASSIC_SYSTEM_PROMPT } from "./config/prompts";
-import State from "@src/classes/state/State";
 
 export default class AutoBotAdapter extends BaseBotAdapter {
-	private static state: State;
-
 	public static getName(): string {
 		return "AutoBot";
 	}
@@ -21,10 +18,7 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		return "Give GPT an automated task";
 	}
 
-	public static async run(state?: State): Promise<void> {
-		// Initialize the State
-		this.state = state;
-
+	public static async run(): Promise<void> {
 		// Get the user's version preference
 		const version = await PromptCLI.select(`Which version of AutoBot would you like to run?:`, [
 			{
