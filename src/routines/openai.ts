@@ -1,14 +1,11 @@
 import { config as cfg } from "@src/config";
 import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
-import { RequestMessage } from "@src/classes/request";
 import { ChatCompletionRequestMessage, ChatCompletionResponseMessage } from "openai";
 import natural from "natural";
+import State from "@src/classes/state/State";
 
 export default class OpenAIRoutine {
-	// Keep track of request messages per key
-	private static requestMessageTable: { [key: string]: RequestMessage } = {};
-
 	public static getName(): string {
 		return "OpenAI chat completion";
 	}
@@ -17,24 +14,22 @@ export default class OpenAIRoutine {
 		return "Submit prompts to OpenAI's chat completion API";
 	}
 
-	public static async promptWithHistory(key: string, callback: (s: ChatCompletionResponseMessage) => void): Promise<void> {
+	public static async promptWithHistory(state: State, callback: (s: ChatCompletionResponseMessage) => void): Promise<void> {
 		// Get the user's prompt
 		const prompt = await PromptCLI.text(`Prompt (type "q" to exit):`);
 		if (PromptCLI.quitCommands.includes(prompt)) {
 			process.exit();
 		}
 
-		// Initialize the request message table
-		if (!(key in this.requestMessageTable)) {
-			this.requestMessageTable[key] = new RequestMessage();
-		}
+		// Get the request message from the state
+		const requestMessage = state.getRequestMessage();
 
 		// Construct the request message based on history
-		this.requestMessageTable[key].addHistoryContext();
-		this.requestMessageTable[key].addUserPrompt(prompt);
+		requestMessage.addHistoryContext();
+		requestMessage.addUserPrompt(prompt);
 
 		// Submit the request to OpenAI, and cycle back to handle the response
-		const messages = this.requestMessageTable[key].generateMessages();
+		const messages = requestMessage.generateMessages();
 
 		const openAI = new OpenAI();
 		openAI.getCompletion({
@@ -44,19 +39,17 @@ export default class OpenAIRoutine {
 				process.stdout.write(content);
 			},
 			onCompleteCallback: (content: ChatCompletionRequestMessage) => {
-				this.requestMessageTable[key].addGPTResponse(content);
+				requestMessage.addGPTResponse(content);
 				callback(content);
 			},
 		});
 	}
 
-	public static async getSummarization(key: string, text: string, question: string): Promise<string> {
+	public static async getSummarization(state: State, text: string, question: string): Promise<string> {
 		const openAI = new OpenAI();
 
-		// Initialize the request message table
-		if (!(key in this.requestMessageTable)) {
-			this.requestMessageTable[key] = new RequestMessage();
-		}
+		// Get the request message from the state
+		const requestMessage = state.getRequestMessage();
 
 		const chunks = this.splitSentencesUsingNLP(text, 8192);
 		const summaries = [];
@@ -66,10 +59,10 @@ export default class OpenAIRoutine {
 
 			const prompt = this.prepareSummaryPrompt(chunk, question);
 
-			this.requestMessageTable[key].addUserPrompt(prompt);
+			requestMessage.addUserPrompt(prompt);
 
 			// Submit the request to OpenAI, and cycle back to handle the response
-			const messages = this.requestMessageTable[key].generateMessages();
+			const messages = requestMessage.generateMessages();
 
 			console.log(`Submitting chunk ${parseInt(index, 10) + 1} of ${chunks.length} to OpenAI...`);
 			const response = await openAI.getCompletion({
@@ -80,7 +73,7 @@ export default class OpenAIRoutine {
 				},
 			});
 
-			this.requestMessageTable[key].addGPTResponse(response);
+			requestMessage.addGPTResponse(response);
 
 			summaries.push(response.content);
 		}
@@ -93,10 +86,10 @@ export default class OpenAIRoutine {
 		// Ask once more for a summary of the summaries
 		const prompt = this.prepareSummaryPrompt(summaries.join("\n"), question);
 
-		this.requestMessageTable[key].addUserPrompt(prompt);
+		requestMessage.addUserPrompt(prompt);
 
 		// Submit the request to OpenAI, and cycle back to handle the response
-		const messages = this.requestMessageTable[key].generateMessages();
+		const messages = requestMessage.generateMessages();
 
 		console.log(`Summarizing all chunk summaries with OpenAI...`);
 		const response = await openAI.getCompletion({
@@ -107,7 +100,7 @@ export default class OpenAIRoutine {
 			},
 		});
 
-		this.requestMessageTable[key].addGPTResponse(response);
+		requestMessage.addGPTResponse(response);
 
 		return response.content;
 	}

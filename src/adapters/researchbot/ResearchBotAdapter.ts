@@ -21,9 +21,9 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 		return "Ask GPT to research a topic for you.";
 	}
 
-	public static async run(): Promise<void> {
+	public static async run(state?: State): Promise<void> {
 		// Initalize user's state
-		this.state = new State();
+		this.state = state;
 
 		// Collect all of the commands from the operations folder
 		const commands = AutobotRoutine.listOperations(WebOperations);

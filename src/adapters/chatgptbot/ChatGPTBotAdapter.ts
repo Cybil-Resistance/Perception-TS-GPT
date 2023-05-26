@@ -1,3 +1,4 @@
+import State from "@src/classes/state/State";
 import OpenAIRoutine from "@src/routines/openai";
 
 export default class ChatGPTBotAdapter {
@@ -9,7 +10,7 @@ export default class ChatGPTBotAdapter {
 		return "Chat with GPT";
 	}
 
-	public static async run(): Promise<void> {
-		OpenAIRoutine.promptWithHistory("chatgptbot", ChatGPTBotAdapter.run);
+	public static async run(state?: State): Promise<void> {
+		OpenAIRoutine.promptWithHistory(state, ChatGPTBotAdapter.run.bind(this, state));
 	}
 }

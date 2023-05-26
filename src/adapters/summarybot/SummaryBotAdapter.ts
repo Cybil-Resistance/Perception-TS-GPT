@@ -1,8 +1,9 @@
+import fs from "fs";
 import OpenAIRoutine from "@src/routines/openai";
 import Selenium from "@src/operations/selenium";
-import fs from "fs";
 import { PromptCLI } from "@src/classes/prompt";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
+import State from "@src/classes/state/State";
 
 export default class SummaryBotAdapter extends BaseBotAdapter {
 	public static getName(): string {
@@ -13,7 +14,7 @@ export default class SummaryBotAdapter extends BaseBotAdapter {
 		return "Analyze and summarize text from file or URL";
 	}
 
-	public static async run(): Promise<void> {
+	public static async run(state: State): Promise<void> {
 		// Ask the user what file or URL they want to summarize
 		const prompt: string = await PromptCLI.text("Enter the path to the file or URL:");
 
@@ -37,7 +38,7 @@ export default class SummaryBotAdapter extends BaseBotAdapter {
 			const question: string = await PromptCLI.text("Enter the question you have about this text:");
 
 			// Summarize the file contents
-			const summary: string = await OpenAIRoutine.getSummarization("summarize", contents, question);
+			const summary: string = await OpenAIRoutine.getSummarization(state, contents, question);
 
 			// Display the summary
 			console.log(`\nGPT response:\n${summary}\n`);
@@ -50,7 +51,7 @@ export default class SummaryBotAdapter extends BaseBotAdapter {
 		const repeat: boolean = await PromptCLI.confirm("Summarize another file or URL?");
 
 		if (repeat) {
-			await this.run();
+			await this.run(state);
 		}
 	}
 }

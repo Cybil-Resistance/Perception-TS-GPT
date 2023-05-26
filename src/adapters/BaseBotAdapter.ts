@@ -1,3 +1,4 @@
+import State from "@src/classes/state/State";
 import express from "express";
 import fs from "fs";
 
@@ -22,7 +23,7 @@ export class BaseBotAdapter {
 		return [];
 	}
 
-	public static async run(): Promise<void> {
+	public static async run(_: State): Promise<void> {
 		throw new Error("run not implemented.");
 	}
 

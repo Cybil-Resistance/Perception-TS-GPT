@@ -21,9 +21,9 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		return "Give GPT an automated task";
 	}
 
-	public static async run(): Promise<void> {
+	public static async run(state?: State): Promise<void> {
 		// Initialize the State
-		this.state = new State();
+		this.state = state;
 
 		// Get the user's version preference
 		const version = await PromptCLI.select(`Which version of AutoBot would you like to run?:`, [

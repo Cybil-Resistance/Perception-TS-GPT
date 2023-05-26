@@ -144,7 +144,7 @@ export default class AutobotRoutine {
 					// If the content is too long, iterate through summarization
 					if (output.length > 2048) {
 						console.log(`Output was too long, summarizing...`);
-						const summary = await OpenAiRoutine.getSummarization("autobot", output, objective);
+						const summary = await OpenAiRoutine.getSummarization(state, output, objective);
 						console.log(`Summary:\n${summary}\n`);
 						callbackResponse = `You just ran the command "${_commandName}" with the arguments ${JSON.stringify(
 							_commandArgs,

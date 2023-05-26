@@ -1,6 +1,6 @@
-//import prompts from "prompts";
 import { PromptCLI } from "@src/classes/prompt";
 import { Adapters } from "@src/adapters";
+import State from "@src/classes/state/State";
 
 // Run the program
 (async (): Promise<void> => {
@@ -24,6 +24,9 @@ import { Adapters } from "@src/adapters";
 		process.exit();
 	}
 
+	// Construct program state
+	const state = new State();
+
 	// Run the program
-	await ChosenAdapter.run();
+	await ChosenAdapter.run(state);
 })();

@@ -12,11 +12,10 @@ import { FILE_LIST, FILE_CONTENTS, CREATE_OPERATION, EDIT_OPERATION } from "./co
 import highlight from "cli-highlight";
 import path from "path";
 import { FileWrite } from "@src/operations";
+import State from "@src/classes/state/State";
 
 export default class PerceptionBotAdapter extends BaseBotAdapter {
-	protected static configPath: string = process.cwd() + "/data/codebot.json";
-	public static homeDirectory: string;
-	public static repositoryDirectory: string;
+	public static state: State;
 
 	public static getName(): string {
 		return "Code Bot";
@@ -26,15 +25,18 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		return "Work in a code repository";
 	}
 
-	public static async run(): Promise<void> {
-		// Pull the home directory from the config file
-		this.homeDirectory = this.getConfig("homeDirectory");
+	public static async run(state: State): Promise<void> {
+		// Save the state
+		this.state = state;
+
+		// Get the home directory from the state
+		const { homeDirectory } = this.state.getProgramState("codebot");
 
 		// Report to the user
-		console.log("Home directory: " + this.homeDirectory);
+		console.log("Home directory: " + homeDirectory);
 
 		// Determine if we can find the home directory
-		if (!this.homeDirectory) {
+		if (!homeDirectory) {
 			// Prompt the user to set the home directory
 			this.setHomeDirectory();
 		} else {
@@ -63,7 +65,10 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	private static async viewHomeDirectory(): Promise<void> {
-		const filesAndFolders: object = await DirectoryList.run(this.homeDirectory);
+		// Get the home directory from the state
+		const { homeDirectory } = this.state.getProgramState("codebot");
+
+		const filesAndFolders: object = await DirectoryList.run(homeDirectory);
 
 		// Prompt the user to select a directory or file
 		const prompt: string = await PromptCLI.select("Select a repository to connect to, or clone a new one:", [
@@ -88,18 +93,26 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			let repositoryPath: string = await PromptCLI.text("Enter the new folder name:");
 
 			// Check that the repository path doesn't already exist
-			while (fs.existsSync(this.homeDirectory + "/" + repositoryPath)) {
+			while (fs.existsSync(homeDirectory + "/" + repositoryPath)) {
 				console.log("A folder with that name already exists.");
 				repositoryPath = await PromptCLI.text("Enter the new folder name:");
 			}
 
+			const repositoryDirectory = homeDirectory + "/" + repositoryPath;
+
+			// Save the repositoryDirectory to the state
+			this.state.setProgramState("codebot", { repositoryDirectory });
+
 			// Clone the repository
-			this.repositoryDirectory = this.homeDirectory + "/" + repositoryPath;
-			await Git.clone(repositoryUrl, this.repositoryDirectory);
+			await Git.clone(repositoryUrl, repositoryDirectory);
 		} else {
-			// Set the repository path
-			this.repositoryDirectory = this.homeDirectory + "/" + prompt;
-			await Git.setRepo(this.repositoryDirectory);
+			const repositoryDirectory = homeDirectory + "/" + prompt;
+
+			// Save the repositoryDirectory to the state
+			this.state.setProgramState("codebot", { repositoryDirectory });
+
+			// Set the repository
+			await Git.setRepo(repositoryDirectory);
 		}
 
 		// Provide the user with options for the repository
@@ -107,18 +120,17 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	private static async setHomeDirectory(): Promise<void> {
+		let homeDirectory: string;
 		do {
-			const prompt: string = await PromptCLI.text("Enter the home directory filepath for CodeBot:");
+			homeDirectory = await PromptCLI.text("Enter the home directory filepath for CodeBot:");
 
-			if (!fs.existsSync(prompt)) {
-				console.log("Chosen directory (" + prompt + ") does not exist.");
+			if (!fs.existsSync(homeDirectory)) {
+				console.log("Chosen directory (" + homeDirectory + ") does not exist.");
 			} else {
-				this.homeDirectory = prompt;
+				// Save the home directory to the state
+				this.state.setProgramState("codebot", { homeDirectory });
 			}
-		} while (!fs.existsSync(this.homeDirectory));
-
-		// Set the home directory in the config file
-		this.setConfig("homeDirectory", this.homeDirectory);
+		} while (!fs.existsSync(homeDirectory));
 
 		this.mainMenu();
 	}
@@ -132,12 +144,15 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			{ title: "Go back", value: "back" },
 		]);
 
+		// Get the repository directory from the state
+		const { repositoryDirectory } = this.state.getProgramState("codebot");
+
 		switch (prompt) {
 			case "view-files":
 				this.viewFiles();
 				break;
 			case "view-code-analysis":
-				this.navigateFileStructure(this.repositoryDirectory, true, this.viewCodeAnalysis.bind(this));
+				this.navigateFileStructure(repositoryDirectory, true, this.viewCodeAnalysis.bind(this));
 				break;
 			case "create-file":
 				this.createOperation();
@@ -160,11 +175,14 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 			{ title: "Cancel", value: "cancel" },
 		]);
 
+		// Get the repository directory from the state
+		const { repositoryDirectory } = this.state.getProgramState("codebot");
+
 		if (nextOperation === "save") {
 			if (filepath) {
 				this.promptFileSave(content, filepath, filename);
 			} else {
-				this.navigateFileStructure(this.repositoryDirectory, false, this.promptFileSave.bind(this, content));
+				this.navigateFileStructure(repositoryDirectory, false, this.promptFileSave.bind(this, content));
 			}
 		} else if (nextOperation === "edit") {
 			this.editOperation(content, referenceFiles, filepath, filename);
@@ -178,9 +196,12 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 		// Prompt the user for their desired operation
 		const includeReferenceFile: boolean = await PromptCLI.confirm("Do you want to add a file for reference?");
 
+		// Get the repository directory from the state
+		const { repositoryDirectory } = this.state.getProgramState("codebot");
+
 		// If the user wants to use a reference file, prompt them for it
 		if (includeReferenceFile) {
-			this.navigateFileStructure(this.repositoryDirectory, true, (filename) => {
+			this.navigateFileStructure(repositoryDirectory, true, (filename) => {
 				referenceFiles = (referenceFiles || []).concat([filename]);
 				this.createOperation(referenceFiles);
 			});
@@ -218,9 +239,12 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	private static async editOperation(content?: string, referenceFiles?: string[], filepath?: string, filename?: string): Promise<void> {
+		// Get the repository directory from the state
+		const { repositoryDirectory } = this.state.getProgramState("codebot");
+
 		// If there is no content, we need to fetch the first file
 		if (!content) {
-			this.navigateFileStructure(this.repositoryDirectory, true, (_filename) => {
+			this.navigateFileStructure(repositoryDirectory, true, (_filename) => {
 				const content = fs.readFileSync(_filename, "utf-8");
 				this.printCode(content);
 				this.editOperation(content, referenceFiles, path.dirname(_filename), path.basename(_filename));
@@ -233,7 +257,7 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 
 		// If the user wants to use a reference file, prompt them for it
 		if (includeReferenceFile) {
-			this.navigateFileStructure(this.repositoryDirectory, true, (filename) => {
+			this.navigateFileStructure(repositoryDirectory, true, (filename) => {
 				referenceFiles = (referenceFiles || []).concat([filename]);
 				this.editOperation(content, referenceFiles, filepath, filename);
 			});
@@ -380,7 +404,9 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	private static async getFiles(): Promise<string> {
-		CodeAnalysisRoutine.setRootDirectory(this.repositoryDirectory);
+		// Get the repository directory from the state
+		const { repositoryDirectory } = this.state.getProgramState("codebot");
+		CodeAnalysisRoutine.setRootDirectory(repositoryDirectory);
 		return CodeAnalysisRoutine.listFilePaths(CodeAnalysisRoutine.getProgramFiles(true), "").join("\n");
 	}
 
