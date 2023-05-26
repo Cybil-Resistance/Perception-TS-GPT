@@ -1,6 +1,5 @@
 import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
-import { RequestMessage } from "@src/classes/request";
 import { Operations } from "@src/operations";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 import { config as cfg } from "@src/config";
@@ -9,13 +8,10 @@ import AutobotRoutine from "@src/routines/autobot";
 
 // Local imports
 import { PERCEPTION_SYSTEM_PROMPT, CLASSIC_SYSTEM_PROMPT } from "./config/prompts";
+import State from "@src/classes/state/State";
 
 export default class AutoBotAdapter extends BaseBotAdapter {
-	private static openAI: OpenAI;
-	private static requestMessage: RequestMessage;
-	private static commands: string[];
-	private static objective: string;
-	private static promptsToRunRemaining: number = 0;
+	private static state: State;
 
 	public static getName(): string {
 		return "AutoBot";
@@ -26,12 +22,8 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 	}
 
 	public static async run(): Promise<void> {
-		// Initalize OpenAI helper and the request message
-		this.openAI = new OpenAI();
-		this.requestMessage = new RequestMessage();
-
-		// Collect all of the commands from the operations folder
-		this.commands = AutobotRoutine.listOperations(Operations);
+		// Initialize the State
+		this.state = new State();
 
 		// Get the user's version preference
 		const version = await PromptCLI.select(`Which version of AutoBot would you like to run?:`, [
@@ -60,40 +52,54 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 
 	private static async startPerception(): Promise<void> {
 		// Get the user's prompt
-		this.objective = await PromptCLI.text(`What objective would you like your AutoBot to perform for you?:`);
-		if (PromptCLI.quitCommands.includes(this.objective)) {
+		const objective = await PromptCLI.text(`What objective would you like your AutoBot to perform for you?:`);
+		if (PromptCLI.quitCommands.includes(objective)) {
 			process.exit();
 		}
 
+		// Collect all of the commands from the operations folder
+		const commands = AutobotRoutine.listOperations(Operations);
+
 		// Report the state of the program to the user
-		console.log(`\nCommands enabled:\n${this.commands.join("\n")}`);
-		console.log(`\nObjective: ${this.objective}\n`);
+		console.log(`\nCommands enabled:\n${commands.join("\n")}`);
+		console.log(`\nObjective: ${objective}\n`);
+
+		// Store the objective in the program state
+		this.state.setProgramState("autobot", { objective });
 
 		this.runPerception();
 	}
 
 	private static async runPerception(operationResult?: string): Promise<void> {
+		// Get the requestMessage and the program state data
+		const { objective } = this.state.getProgramState("autobot");
+		const requestMessage = this.state.getRequestMessage();
+
+		// Collect all of the commands from the operations folder
+		const commands = AutobotRoutine.listOperations(Operations);
+
 		// Set up the system prompts
-		this.requestMessage.addSystemPrompt(
-			PERCEPTION_SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", this.objective).replaceAll("{{COMMANDS}}", this.commands.join("\n")),
+		requestMessage.addSystemPrompt(
+			PERCEPTION_SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", objective).replaceAll("{{COMMANDS}}", commands.join("\n")),
 		);
-		this.requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
-		this.requestMessage.addHistoryContext();
+		requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
+		requestMessage.addHistoryContext();
 
 		if (operationResult) {
-			this.requestMessage.addSystemPrompt(operationResult);
+			requestMessage.addSystemPrompt(operationResult);
 		}
 
 		// Construct the request message based on history
-		this.requestMessage.addUserPrompt(
+		requestMessage.addUserPrompt(
 			"Determine which next command to use, and respond ONLY using the JSON format specified. No other response format is permitted.",
 		);
 
 		// Submit the request to OpenAI, and cycle back to handle the response
-		const messages = this.requestMessage.generateMessages();
+		const messages = requestMessage.generateMessages();
 
 		// Get the response and handle it
-		const response = await this.openAI.getCompletion({
+		const openAI = new OpenAI();
+		const response = await openAI.getCompletion({
 			messages,
 			model: cfg.FAST_LLM_MODEL,
 			onMessageCallback: (response) => {
@@ -102,7 +108,7 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		});
 
 		// Store GPT's reponse
-		this.requestMessage.addGPTResponse(response);
+		requestMessage.addGPTResponse(response);
 
 		// Report the response to the user
 		console.log(`\nGPT Response:\n${response.content}\n`);
@@ -124,69 +130,72 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		} catch (error) {
 			console.error(error);
 
-			this.requestMessage.addSystemPrompt(`Your response must follow the JSON format.`);
+			requestMessage.addSystemPrompt(`Your response must follow the JSON format.`);
 
 			return this.runPerception();
 		}
 
 		// Prompt the user if they'd like to continue
-		let _continue = true;
-		[_continue, this.promptsToRunRemaining] = await AutobotRoutine.promptOperation(
-			parsedCommandName,
-			parsedCommandArgs,
-			this.promptsToRunRemaining,
-			this.requestMessage,
-		);
+		const _continue = await AutobotRoutine.promptOperation(this.state, parsedCommandName, parsedCommandArgs);
+
 		if (!_continue) {
 			return this.runPerception();
 		}
 
 		// Attempt to run the command
-		return AutobotRoutine.issueOperation(
-			parsedCommandName,
-			parsedCommandArgs,
-			this.objective,
-			Operations,
-			this.runPerception.bind(this),
-		);
+		return AutobotRoutine.issueOperation(this.state, parsedCommandName, parsedCommandArgs, Operations, this.runPerception.bind(this));
 	}
 
 	private static async startClassic(): Promise<void> {
 		// Get the user's prompt
-		this.objective = await PromptCLI.text(`What objective would you like your AutoBot to perform for you?:`);
-		if (PromptCLI.quitCommands.includes(this.objective)) {
+		const objective = await PromptCLI.text(`What objective would you like your AutoBot to perform for you?:`);
+		if (PromptCLI.quitCommands.includes(objective)) {
 			process.exit();
 		}
 
+		// Collect all of the commands from the operations folder
+		const commands = AutobotRoutine.listOperations(Operations);
+
 		// Report the state of the program to the user
-		console.log(`\nCommands enabled:\n${this.commands.join("\n")}`);
-		console.log(`\nObjective: ${this.objective}\n`);
+		console.log(`\nCommands enabled:\n${commands.join("\n")}`);
+		console.log(`\nObjective: ${objective}\n`);
+
+		// Store the objective in the program state
+		this.state.setProgramState("autobot", { objective });
 
 		this.runClassic();
 	}
 
 	private static async runClassic(operationResult?: string): Promise<void> {
+		// Get the requestMessage and the program state data
+		const { objective } = this.state.getProgramState("autobot");
+		const requestMessage = this.state.getRequestMessage();
+
+		// Collect all of the commands from the operations folder
+		const commands = AutobotRoutine.listOperations(Operations);
+
 		// Set up the system prompts
-		this.requestMessage.addSystemPrompt(
-			CLASSIC_SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", this.objective).replaceAll("{{COMMANDS}}", this.commands.join("\n")),
+		requestMessage.addSystemPrompt(
+			CLASSIC_SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", objective).replaceAll("{{COMMANDS}}", commands.join("\n")),
 		);
-		this.requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
-		this.requestMessage.addHistoryContext();
+		requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
+		requestMessage.addHistoryContext();
 
 		if (operationResult) {
-			this.requestMessage.addSystemPrompt(operationResult);
+			requestMessage.addSystemPrompt(operationResult);
 		}
 
 		// Construct the request message based on history
-		this.requestMessage.addUserPrompt(
+		requestMessage.addUserPrompt(
 			"Determine which next command to use, and respond ONLY using the JSON format specified. No other response format is permitted.",
 		);
 
 		// Submit the request to OpenAI, and cycle back to handle the response
-		const messages = this.requestMessage.generateMessages();
+		const messages = requestMessage.generateMessages();
 
 		// Get the response and handle it
-		const response = await this.openAI.getCompletion({
+		const openAI = new OpenAI();
+		const response = await openAI.getCompletion({
 			messages,
 			model: cfg.FAST_LLM_MODEL,
 			onMessageCallback: (response) => {
@@ -195,7 +204,7 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		});
 
 		// Store GPT's reponse
-		this.requestMessage.addGPTResponse(response);
+		requestMessage.addGPTResponse(response);
 
 		// Parse the JSON response
 		let parsedCommandName, parsedCommandArgs;
@@ -214,30 +223,19 @@ export default class AutoBotAdapter extends BaseBotAdapter {
 		} catch (error) {
 			console.error(error);
 
-			this.requestMessage.addSystemPrompt(`Your response must follow the JSON format.`);
+			requestMessage.addSystemPrompt(`Your response must follow the JSON format.`);
 
 			return this.runClassic();
 		}
 
 		// Prompt the user if they'd like to continue
-		let _continue = true;
-		[_continue, this.promptsToRunRemaining] = await AutobotRoutine.promptOperation(
-			parsedCommandName,
-			parsedCommandArgs,
-			this.promptsToRunRemaining,
-			this.requestMessage,
-		);
+		const _continue = await AutobotRoutine.promptOperation(this.state, parsedCommandName, parsedCommandArgs);
+
 		if (!_continue) {
 			return this.runClassic();
 		}
 
 		// Attempt to run the command
-		return AutobotRoutine.issueOperation(
-			parsedCommandName,
-			parsedCommandArgs,
-			this.objective,
-			Operations,
-			this.runClassic.bind(this),
-		);
+		return AutobotRoutine.issueOperation(this.state, parsedCommandName, parsedCommandArgs, Operations, this.runClassic.bind(this));
 	}
 }

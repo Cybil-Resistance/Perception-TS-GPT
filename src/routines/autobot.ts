@@ -1,7 +1,7 @@
-import { RequestMessage } from "@src/classes/request";
 import BaseOperation from "../operations/base_operation";
 import OpenAiRoutine from "./openai";
 import { PromptCLI } from "@src/classes/prompt";
+import State from "@src/classes/state/State";
 
 export default class AutobotRoutine {
 	public static getName(): string {
@@ -37,14 +37,12 @@ export default class AutobotRoutine {
 			.filter((command) => command.length);
 	}
 
-	public static async promptOperation(
-		_commandName: string,
-		_commandArgs: string[],
-		_promptsToRunRemaining: number,
-		_requestMessage: RequestMessage,
-	): Promise<[boolean, number]> {
+	public static async promptOperation(state: State, _commandName: string, _commandArgs: string[]): Promise<boolean> {
+		// Get the prompts to run remaining from the state
+		let { promptsToRunRemaining = 0 } = state.getProgramState("autobot");
+
 		// Prompt the user if they'd like to continue
-		if (_promptsToRunRemaining <= 0) {
+		if (promptsToRunRemaining <= 0) {
 			const selection = await PromptCLI.select(
 				`Would you like to run the command "${_commandName}" with the arguments "${JSON.stringify(_commandArgs)}"?`,
 				[
@@ -67,32 +65,38 @@ export default class AutobotRoutine {
 				],
 			);
 
-			_promptsToRunRemaining = selection;
+			promptsToRunRemaining = selection;
 		} else {
 			console.log(`Auto-approving the command "${_commandName}" with the arguments "${JSON.stringify(_commandArgs)}".`);
-			console.log(`Auto-approvals remaining: ${_promptsToRunRemaining}`);
+			console.log(`Auto-approvals remaining: ${promptsToRunRemaining}`);
 		}
 
-		if (_promptsToRunRemaining == 0) {
-			_requestMessage.addSystemPrompt(`User rejected your suggested command. Re-evaluate your options and try again.`);
-			return [false, _promptsToRunRemaining];
-		} else if (_promptsToRunRemaining < 0) {
+		if (promptsToRunRemaining == 0) {
+			// Get the request message from the state, add the system prompt
+			const requestMessage = state.getRequestMessage();
+			requestMessage.addSystemPrompt(`User rejected your suggested command. Re-evaluate your options and try again.`);
+			return false;
+		} else if (promptsToRunRemaining < 0) {
 			process.exit();
 		}
 
 		// Decrement the prompts to run
-		_promptsToRunRemaining--;
+		promptsToRunRemaining--;
 
-		return [true, _promptsToRunRemaining];
+		// Store the latest prompts to run remaining
+		state.setProgramState("autobot", { promptsToRunRemaining });
+
+		return true;
 	}
 
 	public static async issueOperation(
+		state: State,
 		_commandName: string,
 		_commandArgs: object,
-		_objective: string,
 		_Operations: Array<typeof BaseOperation>,
-		callback: (result? : string) => Promise<void>,
+		callback: (result?: string) => Promise<void>,
 	): Promise<void> {
+		const { objective } = state.getProgramState("autobot");
 		let callbackResponse = "";
 		for (const operation of _Operations) {
 			for (const cmd of operation.getOperations()) {
@@ -140,12 +144,16 @@ export default class AutobotRoutine {
 					// If the content is too long, iterate through summarization
 					if (output.length > 2048) {
 						console.log(`Output was too long, summarizing...`);
-						const summary = await OpenAiRoutine.getSummarization("autobot", output, _objective);
+						const summary = await OpenAiRoutine.getSummarization("autobot", output, objective);
 						console.log(`Summary:\n${summary}\n`);
-						callbackResponse = `You just ran the command "${_commandName}" with the arguments ${JSON.stringify(_commandArgs)}.\n\nThe result of your command was:\n"${summary}".`;
+						callbackResponse = `You just ran the command "${_commandName}" with the arguments ${JSON.stringify(
+							_commandArgs,
+						)}.\n\nThe result of your command was:\n"${summary}".`;
 					} else {
 						console.log(`\nOutput:\n${output}\n`);
-						callbackResponse = `You just ran the command "${_commandName}" with the arguments ${JSON.stringify(_commandArgs)}.\n\nThe result of your command was:\n"${output}".`;
+						callbackResponse = `You just ran the command "${_commandName}" with the arguments ${JSON.stringify(
+							_commandArgs,
+						)}.\n\nThe result of your command was:\n"${output}".`;
 					}
 				}
 			}

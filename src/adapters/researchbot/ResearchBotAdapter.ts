@@ -1,6 +1,6 @@
 import { OpenAI } from "@src/classes/llm";
 import { PromptCLI } from "@src/classes/prompt";
-import { RequestMessage } from "@src/classes/request";
+import State from "@src/classes/state/State";
 import { WebOperations } from "@src/operations";
 import { BaseBotAdapter } from "@src/adapters/BaseBotAdapter";
 import { config as cfg } from "@src/config";
@@ -11,10 +11,7 @@ import dJSON from "dirty-json";
 import { SYSTEM_PROMPT } from "./config/prompts";
 
 export default class ResearchBotAdapter extends BaseBotAdapter {
-	private static openAI: OpenAI;
-	private static requestMessage: RequestMessage;
-	private static commands: string[];
-	private static objective: string;
+	private static state: State;
 
 	public static getName(): string {
 		return "ResearchBot";
@@ -25,48 +22,58 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 	}
 
 	public static async run(): Promise<void> {
-		// Initalize OpenAI helper and the request message
-		this.openAI = new OpenAI();
-		this.requestMessage = new RequestMessage();
+		// Initalize user's state
+		this.state = new State();
 
 		// Collect all of the commands from the operations folder
-		this.commands = AutobotRoutine.listOperations(WebOperations);
+		const commands = AutobotRoutine.listOperations(WebOperations);
 
 		// Get the user's prompt
-		this.objective = await PromptCLI.text(`What would you like to research?`);
-		if (PromptCLI.quitCommands.includes(this.objective)) {
+		const objective = await PromptCLI.text(`What would you like to research?`);
+		if (PromptCLI.quitCommands.includes(objective)) {
 			process.exit();
 		}
 
 		// Report the state of the program to the user
-		console.log(`\nCommands enabled:\n${this.commands.join("\n")}`);
-		console.log(`\nResearch topic: ${this.objective}\n`);
+		console.log(`\nCommands enabled:\n${commands.join("\n")}`);
+		console.log(`\nResearch topic: ${objective}\n`);
+
+		// Save the objective to the program state
+		this.state.setProgramState("researcher", { objective });
 
 		this.runResearcher();
 	}
 
 	private static async runResearcher(operationResult?: string): Promise<void> {
+		// Get the state requestMessage and data
+		const requestMessage = this.state.getRequestMessage();
+		const { objective } = this.state.getProgramState("researcher");
+
+		// Collect all of the commands from the operations folder
+		const commands = AutobotRoutine.listOperations(WebOperations);
+
 		// Set up the system prompts
-		this.requestMessage.addSystemPrompt(
-			SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", this.objective).replaceAll("{{COMMANDS}}", this.commands.join("\n")),
+		requestMessage.addSystemPrompt(
+			SYSTEM_PROMPT.replaceAll("{{OBJECTIVE}}", objective).replaceAll("{{COMMANDS}}", commands.join("\n")),
 		);
-		this.requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
-		this.requestMessage.addHistoryContext();
+		requestMessage.addSystemPrompt(`The current time is ${new Date().toLocaleString()}.`);
+		requestMessage.addHistoryContext();
 
 		if (operationResult) {
-			this.requestMessage.addSystemPrompt(operationResult);
+			requestMessage.addSystemPrompt(operationResult);
 		}
 
 		// Construct the request message based on history
-		this.requestMessage.addUserPrompt(
+		requestMessage.addUserPrompt(
 			"Determine which next command to use, and respond ONLY using the JSON format specified. No other response format is permitted.",
 		);
 
 		// Submit the request to OpenAI, and cycle back to handle the response
-		const messages = this.requestMessage.generateMessages();
+		const messages = requestMessage.generateMessages();
 
 		// Get the response and handle it
-		const response = await this.openAI.getCompletion({
+		const openAI = new OpenAI();
+		const response = await openAI.getCompletion({
 			messages,
 			model: cfg.FAST_LLM_MODEL,
 			onMessageCallback: (response) => {
@@ -75,7 +82,7 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 		});
 
 		// Store GPT's reponse
-		this.requestMessage.addGPTResponse(response);
+		requestMessage.addGPTResponse(response);
 
 		// Parse the JSON response
 		let parsedCommandName, parsedCommandArgs;
@@ -94,16 +101,16 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 		} catch (error) {
 			console.error(error);
 
-			this.requestMessage.addSystemPrompt(`Your response must follow the JSON format.`);
+			requestMessage.addSystemPrompt(`Your response must follow the JSON format.`);
 
 			return this.runResearcher();
 		}
 
 		// Attempt to run the command
 		return AutobotRoutine.issueOperation(
+			this.state,
 			parsedCommandName,
 			parsedCommandArgs,
-			this.objective,
 			WebOperations,
 			this.runResearcher.bind(this),
 		);

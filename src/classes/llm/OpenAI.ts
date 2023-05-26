@@ -93,7 +93,7 @@ export class OpenAI {
 				}
 
 				// Try to run again
-				this.getCompletion({...args, numCompletionAttempts: (args.numCompletionAttempts || 0) + 1});
+				this.getCompletion({ ...args, numCompletionAttempts: (args.numCompletionAttempts || 0) + 1 });
 			});
 
 			return new Promise((resolve) => {
@@ -117,7 +117,9 @@ export class OpenAI {
 				});
 			});
 		} catch (error) {
-			console.error(`Error with OpenAI API, attempt ${args.numCompletionAttempts} out of ${this.maxCompletionAttempts}: ${error.message}`);
+			console.error(
+				`Error with OpenAI API, attempt ${args.numCompletionAttempts} out of ${this.maxCompletionAttempts}: ${error.message}`,
+			);
 
 			// Wait just a bit before trying again
 			await new Promise((resolve) => setTimeout(resolve, 500));
@@ -129,7 +131,7 @@ export class OpenAI {
 			}
 
 			// Try to run again
-			return this.getCompletion({...args, numCompletionAttempts: (args.numCompletionAttempts || 0) + 1});
+			return this.getCompletion({ ...args, numCompletionAttempts: (args.numCompletionAttempts || 0) + 1 });
 		}
 	}
 }

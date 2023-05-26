@@ -20,6 +20,22 @@ export class RequestMessage {
 	private history: RequestMessageHistory = [];
 	private includeHistory: boolean = false;
 
+	public serialize(): string {
+		return JSON.stringify({
+			currentPrompts: this.currentPrompts,
+			history: this.history,
+			includeHistory: this.includeHistory,
+		});
+	}
+
+	public deserialize(serialized: string): void {
+		const data = JSON.parse(serialized);
+
+		this.currentPrompts = data.currentPrompts;
+		this.history = data.history;
+		this.includeHistory = data.includeHistory;
+	}
+
 	public addSystemPrompt(prompt: string): void {
 		this.currentPrompts.prompts.push({
 			role: ChatCompletionRequestMessageRoleEnum.System,
