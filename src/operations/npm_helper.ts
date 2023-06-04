@@ -29,7 +29,7 @@ export default class NpmHelper extends BaseOperation {
 
 			// Extract packages from import statements
 			importStatements.forEach((statement) => {
-				const packageName = statement.match(/['"].+?['"]/)?.[0].replace(/['"]/g, "");
+				const packageName = (statement as string).match(/['"].+?['"]/)?.[0].replace(/['"]/g, "");
 				if (packageName) {
 					importedPackages.push(packageName);
 				}
@@ -37,7 +37,7 @@ export default class NpmHelper extends BaseOperation {
 
 			// Extract packages from require statements
 			requireStatements.forEach((statement) => {
-				const packageName = statement.match(/['"].+?['"]/)?.[0].replace(/['"]/g, "");
+				const packageName = (statement as string).match(/['"].+?['"]/)?.[0].replace(/['"]/g, "");
 				if (packageName) {
 					importedPackages.push(packageName);
 				}

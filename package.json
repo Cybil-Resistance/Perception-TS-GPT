@@ -1,9 +1,11 @@
 {
-	"name": "perception-ts-gpt",
-	"version": "0.0.1",
+	"name": "@wolpertingerlabs/perception-ts-gpt",
+	"version": "1.0.0",
 	"description": "Inspired by AutoGPT & AgentGPT, a Typescript implementation of an OpenAI automated prompter",
-	"author": "Ben Heidorn, Cybourgeoisie",
+	"author": "Ben Heidorn, Cybourgeoisie <ben@cybourgeoisie.com>",
 	"license": "MIT",
+	"main": "./build/src/modules.js",
+	"types": "./build/src/modules.d.ts",
 	"engines": {
 		"node": ">= 18.12 <19"
 	},
