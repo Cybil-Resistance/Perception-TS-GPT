@@ -8,7 +8,7 @@ Inspired by Auto-GPT, Perception is a Node.JS / Typescript implementation with s
 
 # Installation
 
-1. `git clone https://github.com/Cybil-Resistance/Perception-TS-GPT.git`
+1. `git clone https://github.com/WolpertingerLabs/perception-ts-gpt.git`
 1. `cd Perception-TS-GPT`
 1. `npm install`
 

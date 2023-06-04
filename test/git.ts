@@ -4,7 +4,7 @@ import path from "path";
 import Git from "@src/operations/git";
 
 describe.skip("Operations: Git Operations", function () {
-	const repoUrl = "https://github.com/Cybil-Resistance/Perception-TS-GPT.git";
+	const repoUrl = "https://github.com/WolpertingerLabs/perception-ts-gpt.git";
 	const repoPath = path.resolve(process.cwd() + "/tmp/repo");
 	const testBranchName = "mocha-automated-testing-dummy";
 
