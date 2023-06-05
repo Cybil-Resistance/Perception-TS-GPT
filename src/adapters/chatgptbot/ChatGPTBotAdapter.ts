@@ -11,6 +11,6 @@ export default class ChatGPTBotAdapter extends BaseBotAdapter {
 	}
 
 	public static async run(): Promise<void> {
-		OpenAIRoutine.promptWithHistory(this.state, ChatGPTBotAdapter.run);
+		OpenAIRoutine.promptWithHistory(this.state, ChatGPTBotAdapter.run.bind(this));
 	}
 }

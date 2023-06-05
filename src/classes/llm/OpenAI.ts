@@ -18,13 +18,22 @@ export type OpenAICompletionArguments = {
 	numCompletionAttempts?: number;
 };
 
+export type OpenAIConfig = {
+	apiKey: string;
+};
+
 export class OpenAI {
 	private openai: OpenAIApi;
 	private maxCompletionAttempts: number = 3;
 
-	constructor() {
+	constructor(config: OpenAIConfig) {
+		// Verify that we have an API key
+		if (!config.apiKey) {
+			throw new Error('OpenAI config "apiKey" must be set to start the program.');
+		}
+
 		const configuration = new Configuration({
-			apiKey: cfg.OPENAI_API_KEY,
+			apiKey: config.apiKey,
 		});
 
 		this.openai = new OpenAIApi(configuration);
@@ -34,8 +43,8 @@ export class OpenAI {
 		// Retrieve the arguments
 		const {
 			messages,
-			model = cfg.FAST_LLM_MODEL,
-			temperature = cfg.OPENAI_TEMPERATURE,
+			model = args.model || cfg.FAST_LLM_MODEL,
+			temperature = args.temperature || cfg.OPENAI_TEMPERATURE,
 			n = 1,
 			onMessageCallback,
 			onCompleteCallback,

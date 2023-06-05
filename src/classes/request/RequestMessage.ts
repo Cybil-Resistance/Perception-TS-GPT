@@ -19,6 +19,11 @@ export class RequestMessage {
 	private currentPrompts: RequestMessageHistoryBlock = { prompts: [] };
 	private history: RequestMessageHistory = [];
 	private includeHistory: boolean = false;
+	private tokenLimit: number = cfg.FAST_TOKEN_LIMIT;
+
+	public setTokenLimit(limit: number): void {
+		this.tokenLimit = limit;
+	}
 
 	public serialize(): string {
 		return JSON.stringify({
@@ -61,9 +66,6 @@ export class RequestMessage {
 			this.history.shift();
 		}
 
-		// Debug
-		//console.log(this.estimateCurrentTokenUse(), cfg.FAST_TOKEN_LIMIT, this.generateConversationHistory().length);
-
 		// Return the history context if there is any history
 		if (this.generateConversationHistory().length > 0) {
 			return {
@@ -88,7 +90,7 @@ export class RequestMessage {
 	}
 
 	public doesPromptExceedTokens(): boolean {
-		return this.estimateCurrentTokenUse() > cfg.FAST_TOKEN_LIMIT;
+		return this.estimateCurrentTokenUse() > this.tokenLimit;
 	}
 
 	public estimateTokens(text: string): number {

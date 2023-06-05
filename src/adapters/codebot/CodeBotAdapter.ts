@@ -421,7 +421,10 @@ export default class PerceptionBotAdapter extends BaseBotAdapter {
 	}
 
 	private static async callOpenAi(systemPrompts: string[], userPrompt: string): Promise<ChatCompletionResponseMessage> {
-		const openAI = new OpenAI();
+		const openAI = new OpenAI({
+			apiKey: cfg.OPENAI_API_KEY,
+		});
+
 		const requestMessage = new RequestMessage();
 
 		// Construct the request message

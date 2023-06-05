@@ -31,7 +31,10 @@ export default class OpenAIRoutine {
 		// Submit the request to OpenAI, and cycle back to handle the response
 		const messages = requestMessage.generateMessages();
 
-		const openAI = new OpenAI();
+		const openAI = new OpenAI({
+			apiKey: cfg.OPENAI_API_KEY,
+		});
+
 		openAI.getCompletion({
 			messages,
 			model: cfg.SMART_LLM_MODEL,
@@ -46,7 +49,9 @@ export default class OpenAIRoutine {
 	}
 
 	public static async getSummarization(state: State, text: string, question: string): Promise<string> {
-		const openAI = new OpenAI();
+		const openAI = new OpenAI({
+			apiKey: cfg.OPENAI_API_KEY,
+		});
 
 		// Get the request message from the state
 		const requestMessage = state.getRequestMessage();

@@ -2,15 +2,10 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-// Verify that certain environment variables are set
-if (!process.env.OPENAI_API_KEY) {
-	throw new Error("OPENAI_API_KEY must be set to start the program.");
-}
-
 export default {
 	SERVER_PORT: (process.env.SERVER_PORT && parseInt(process.env.SERVER_PORT, 10)) || 5200,
 	OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-	OPENAI_TEMPERATURE: (process.env.OPENAI_TEMPERATURE && parseFloat(process.env.OPENAI_TEMPERATURE)) || 0,
+	OPENAI_TEMPERATURE: (process.env.OPENAI_TEMPERATURE && parseFloat(process.env.OPENAI_TEMPERATURE)) || 0.0,
 	GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
 	CUSTOM_SEARCH_ENGINE_ID: process.env.CUSTOM_SEARCH_ENGINE_ID || "",
 	FAST_LLM_MODEL: process.env.FAST_LLM_MODEL || "gpt-3.5-turbo",

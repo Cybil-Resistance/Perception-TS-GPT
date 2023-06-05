@@ -15,7 +15,10 @@ export default class PlanBotAdapter extends BaseBotAdapter {
 
 	public static async run(): Promise<void> {
 		// Initalize OpenAI helper and the request message
-		const openAI = new OpenAI();
+		const openAI = new OpenAI({
+			apiKey: cfg.OPENAI_API_KEY,
+		});
+
 		const requestMessage = new RequestMessage();
 
 		// Ask the user what file or URL they want to summarize

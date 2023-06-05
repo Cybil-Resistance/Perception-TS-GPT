@@ -66,7 +66,10 @@ export default class ResearchBotAdapter extends BaseBotAdapter {
 		const messages = requestMessage.generateMessages();
 
 		// Get the response and handle it
-		const openAI = new OpenAI();
+		const openAI = new OpenAI({
+			apiKey: cfg.OPENAI_API_KEY,
+		});
+
 		const response = await openAI.getCompletion({
 			messages,
 			model: cfg.FAST_LLM_MODEL,
